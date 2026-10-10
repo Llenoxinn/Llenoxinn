@@ -1,0 +1,19 @@
+{
+  "_how": "picoGym (picoCTF, Carnegie Mellon CyLab) stats. Per category: solved by difficulty, plus the category's total challenge count if you know it. Push and the plate redraws. 'recent' is optional, newest first, up to 3 shown.",
+  "username": "sphaericus",
+  "profile_url": "https://play.picoctf.org/practice",
+  "updated": "2026-10-10",
+  "score": null,
+  "rank": null,
+  "solved": {
+    "General Skills":          {"easy": 48, "medium": 4,  "hard": 0, "total": 75},
+    "Reverse Engineering":     {"easy": 1,  "medium": 12, "hard": 0, "total": 102},
+    "Cryptography":            {"easy": 8,  "medium": 2,  "hard": 0, "total": 83},
+    "Web Exploitation":        {"easy": 1,  "medium": 1,  "hard": 0, "total": null},
+    "Artificial Intelligence": {"easy": 1,  "medium": 0,  "hard": 0, "total": 16},
+    "Forensics":               {"easy": 0,  "medium": 0,  "hard": 0, "total": 86},
+    "Binary Exploitation":     {"easy": 0,  "medium": 0,  "hard": 0, "total": 76},
+    "Blockchain":              {"easy": 0,  "medium": 0,  "hard": 0, "total": null}
+  },
+  "recent": []
+}

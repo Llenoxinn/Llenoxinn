@@ -1,0 +1,107 @@
+# Lab rounds: tends the profile README (Python for the data, Rust for the 3D renders).
+#   nightly (00:07 Manila): specimen of the day, vitals, assay plate
+#   Mondays: a new culture is grown
+#   on push to lab/data/picoctf.json: the assay plate is redrawn right away
+name: Lab rounds
+
+on:
+  schedule:
+    - cron: "7 16 * * *"   # 16:07 UTC = 00:07 in Manila
+  push:
+    branches: [main]
+    paths: ["lab/data/picoctf.json"]
+  workflow_dispatch:
+    inputs:
+      specimen_id:
+        description: "Use this PDB entry tonight (blank = random)"
+        required: false
+        default: ""
+      culture_seed:
+        description: "Grow the culture from this seed (blank = this week's)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lab-rounds
+  cancel-in-progress: false
+
+jobs:
+  rounds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: lab/requirements.txt
+
+      - name: Install lab equipment
+        run: pip install -r lab/requirements.txt
+
+      # The turntable renders come from a small Rust ray tracer (lab/render3d).
+      # Rust ships on GitHub's Ubuntu runners; the compiled binary is cached.
+      - name: Cache the renderer
+        if: github.event_name != 'push'
+        uses: actions/cache@v5
+        with:
+          path: lab/render3d/target
+          key: render3d-${{ runner.os }}-${{ hashFiles('lab/render3d/Cargo.toml', 'lab/render3d/src/**') }}
+
+      - name: Build the renderer
+        if: github.event_name != 'push'
+        run: cargo build --release --quiet --manifest-path lab/render3d/Cargo.toml
+
+      - name: CTF assay
+        run: python lab/build_assay.py
+
+      - name: Vital signs
+        if: github.event_name != 'push'
+        env:
+          # The built-in token sees public activity. For private contributions too,
+          # add a fine-grained token as the LAB_TOKEN secret.
+          GITHUB_TOKEN: ${{ secrets.LAB_TOKEN || secrets.GITHUB_TOKEN }}
+        run: python lab/vitals.py
+
+      # runs after vitals: it sizes its 3D model to whatever room the README has left
+      - name: Specimen of the day
+        if: github.event_name != 'push'
+        env:
+          SPECIMEN_ID: ${{ inputs.specimen_id }}
+        run: |
+          if [ -n "$SPECIMEN_ID" ]; then
+            python lab/specimen_of_the_day.py --id "$SPECIMEN_ID"
+          else
+            python lab/specimen_of_the_day.py
+          fi
+
+      - name: Grow a culture (Mondays, manual runs, or a given seed)
+        if: github.event_name != 'push'
+        env:
+          SEED: ${{ inputs.culture_seed }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ -n "$SEED" ]; then
+            python lab/grow_culture.py --seed "$SEED"
+          elif [ "$(TZ=Asia/Manila date +%u)" = "1" ] || [ "$EVENT" = "workflow_dispatch" ]; then
+            python lab/grow_culture.py
+          else
+            echo "Not a plating day."
+          fi
+
+      - name: File the lab notes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md assets/
+          if git diff --cached --quiet; then
+            echo "Nothing new under the microscope."
+          else
+            git commit -m "lab rounds: $(TZ=Asia/Manila date +%F)"
+            git push
+          fi
