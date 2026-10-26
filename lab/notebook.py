@@ -88,7 +88,14 @@ def _font(face):
         path = str(Path(matplotlib.get_data_path()) / "fonts" / "ttf" / "DejaVuSans.ttf")
     else:
         path = str(FONTS / FACES[face])
-    return FontProperties(fname=path), get_font(path)
+    # Advances come from FreeType's hinting at whole pixels. Older matplotlib hints at 8x
+    # horizontal resolution by default (text.hinting_factor), which spreads every letter 8x
+    # apart; ask for 1x so spacing doesn't depend on the installed version.
+    try:
+        font = get_font(path, hinting_factor=1)
+    except TypeError:
+        font = get_font(path)
+    return FontProperties(fname=path), font
 
 
 @lru_cache(maxsize=20000)

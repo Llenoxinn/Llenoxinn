@@ -23654,7 +23654,7 @@ endsolid metaphase_spindle
 <img src="assets/labels/notes.svg" alt="Lab notes">
 
 <!-- CULTURE:START -->
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/culture-dark.gif?v=2026-W44"><img alt="Gray-Scott culture, fingerprint regime, growing" src="assets/culture-light.gif?v=2026-W44" width="100%"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/culture-dark.webp?v=2026-W44"><img alt="Gray-Scott culture, fingerprint regime, growing" src="assets/culture-light.webp?v=2026-W44" width="100%"></picture>
 
 <sub><b>Fig. 2</b> This week's culture · Gray-Scott, <i>fingerprint</i> regime · re-plated every Monday</sub>
 <!-- CULTURE:END -->

@@ -49,8 +49,13 @@ def ensure_binary():
     return BINARY
 
 
-def render(name, prims, frames=72, fps=18, size=(760, 440), ss=2, elev=18, dist=3.2, fov=30, quality=80):
-    """Render prims to assets/{name}-{dark,light}.webp. Returns the output paths."""
+def render(name, prims, frames=48, fps=12, size=(760, 440), ss=2, elev=18, dist=3.2, fov=30, quality=78):
+    """Render prims to assets/{name}-{dark,light}.webp. Returns the output paths.
+
+    The camera moves every frame, so file size follows the frame count: 48 frames at
+    12 fps keeps the 4 s turn at about 60% of the weight of 72 at 18 (around 0.4-0.8 MB
+    each). That is what every visitor downloads, and what every nightly commit adds.
+    """
     binary = ensure_binary()
     work = Path(tempfile.mkdtemp(prefix=f"render-{name}-"))
     try:

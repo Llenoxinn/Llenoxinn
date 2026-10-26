@@ -103,5 +103,10 @@ jobs:
             echo "Nothing new under the microscope."
           else
             git commit -m "lab rounds: $(TZ=Asia/Manila date +%F)"
-            git push
+            # a push to main during the rounds would reject ours: replay on top and try again
+            for attempt in 1 2 3; do
+              git push && exit 0
+              git pull --rebase origin main
+            done
+            exit 1
           fi

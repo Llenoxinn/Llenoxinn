@@ -7,8 +7,11 @@ notebook on red alert: bioinformatics meets cybersecurity. Every figure is gener
 - Never edit generated files in `assets/` by hand. Change the script, then rerun it.
 - README blocks between `<!-- NAME:START -->` and `<!-- NAME:END -->` are owned by scripts. Edit everything else freely.
 - Larp the aesthetic, never the facts: no invented stats, solves, skill percentages or tools. Real data only.
-- GitHub truncates READMEs past 500 KiB. Three STL blocks (plasmid, spindle, specimen) are most of the size;
-  `specimen_of_the_day.py` sizes its model to the room left, so it must run after `vitals.py`.
+- One ```stl block per page, the specimen's. GitHub boots its viewers one at a time and fails any that isn't
+  ready 10 s after the page asks for it, then prints the raw mesh; with three, two failed every time. Other models
+  link to their `.stl` in `assets/`, which GitHub opens full-page in the same viewer.
+- GitHub truncates READMEs past 500 KiB. `specimen_of_the_day.py` sizes its model to the room left, so it runs
+  after `vitals.py`.
 - Figures are unframed: use `notebook.ambient()` for the drifting cells and data behind them, not a border.
 - Palette and fonts live in `lab/notebook.py` (`THEMES`, `FACES`). Use them; don't hardcode new colours.
 - Every visual ships as a `-dark` and `-light` pair, swapped with `<picture>` and `prefers-color-scheme`.
@@ -16,6 +19,8 @@ notebook on red alert: bioinformatics meets cybersecurity. Every figure is gener
 
 - 3D renders: `turntable.py` writes a scene, `render3d` (Rust, std only) renders both themes in one pass, Pillow
   encodes animated WebP. Renders must fade into the exact page colour at the edges (no frames).
+- Weight: every nightly binary is downloaded by each visitor and kept forever in git history. Animations are
+  animated WebP (not GIF), and turntables stay at 48 frames.
 - Captions are one short line. The figures carry the detail; don't explain them in prose.
 
 ## Checking work

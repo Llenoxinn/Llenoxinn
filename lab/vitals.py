@@ -493,9 +493,16 @@ def upgma(names, vecs):
 
 
 def short(name):
-    """Display name for a tip: drop trailing dashes and long subtitles."""
+    """Display lines for a tip: drop trailing dashes and long subtitles, then break a long
+    name at the hyphen nearest its middle rather than cutting it off."""
     n = name.split("---")[0].strip("-")
-    return n if len(n) <= 24 else n[:23] + "…"
+    if len(n) <= 20:
+        return [n]
+    cuts = [i for i, ch in enumerate(n) if ch in "-_" and 4 <= i < len(n) - 3]
+    if not cuts:
+        return [n if len(n) <= 24 else n[:23] + "…"]
+    i = min(cuts, key=lambda i: abs(i - len(n) / 2))
+    return [line if len(line) <= 24 else line[:23] + "…" for line in (n[:i + 1], n[i + 1:])]
 
 
 def phylogeny(repos, theme):
@@ -626,10 +633,16 @@ def phylogeny(repos, theme):
         anchor = "start" if ca > 0.25 else ("end" if ca < -0.25 else "middle")
         sa = math.sin(math.radians(a))
         ly += 4 + (10 if sa > 0.6 else (-8 if sa < -0.6 else 0))
-        name_g, _ = ts.text(short(n), "label", 12.5, lx, ly, t["ink"], anchor=anchor)
+        lines = short(n)
+        up = sa < -0.6                                   # tips at the top grow their labels upward
+        lead = 14
+        y1 = ly - lead * (len(lines) - 1) if up else ly
+        name_g = "".join(ts.text(line, "label", 12.5, lx, y1 + lead * j, t["ink"], anchor=anchor)[0]
+                         for j, line in enumerate(lines))
         extra = ""
         if n in DRAWER:
-            extra = ts.text(DRAWER[n], "hand", 17, lx, ly + (17 if sa > -0.6 else -17), t["pen"], anchor=anchor)[0]
+            hy = y1 - 17 if up else y1 + lead * (len(lines) - 1) + 17
+            extra = ts.text(DRAWER[n], "hand", 17, lx, hy, t["pen"], anchor=anchor)[0]
         body.append(f'<g opacity="0">{name_g}{extra}<set attributeName="opacity" to="1" begin="{grown:.2f}s" fill="freeze"/></g>')
         # a pulse running from the ancestor down this lineage
         body.append(f'<circle r="3.4" fill="{red}" filter="url(#pg)" opacity="0">'
@@ -670,25 +683,27 @@ def write(v, langs):
                                   ("spindle", spindle_scene(langs), dict(dist=4.3, elev=12))):
             render(name, scene, **opts)
             rendered[name] = True
-    except Exception as e:  # noqa: BLE001 - the interactive models still ship without the renders
+    except Exception as e:  # noqa: BLE001 - yesterday's renders stay up; these shapes change slowly
         print(f"::warning::turntable renders failed ({e})")
 
-    def hero(name, alt):
-        return (f'{picture(name, alt, width="100%", ext="webp", query="v=" + stamp)}\n\n' if rendered.get(name) else "")
+    # GitHub boots each ```stl viewer one after another and gives up on any not ready within
+    # 10 s of the page asking, then prints the raw mesh instead. The specimen keeps the README's
+    # one inline viewer; these two open full-page in the same viewer from their .stl files.
+    def hero(name, alt, model):
+        if not (rendered.get(name) or (ASSETS / f"{name}-dark.webp").exists()):
+            return ""
+        return f'<a href="{LAB}/assets/{model}">{picture(name, alt, width="100%", ext="webp", query="v=" + stamp)}</a>\n\n'
     vitals = (
         f'{picture("vitals", "Vital signs monitor", width="100%")}\n\n'
         f'<sub>{v["total"]} contributions this year · {v["commits"]} commits · {v["prs"]} pull requests</sub>\n\n'
-        + hero("plasmid", "Plasmid pLLX turning under the lights") +
-        f'<sub><b>pLLX</b> · the year as a plasmid. One base pair a week; every glowing protein is a week with commits '
-        f'({active} so far).</sub>\n\n'
-        f'<sub>Grab it and turn it:</sub>\n\n'
-        f'```stl\n{stl}\n```\n\n'
+        + hero("plasmid", "Plasmid pLLX turning under the lights. Open it in 3D", "helix.stl") +
+        f'<sub><b>pLLX</b> · the year as a plasmid, a base pair a week; each glowing protein is a week with commits '
+        f'({active} so far) · <a href="{LAB}/assets/helix.stl">turn it in 3D</a></sub>\n\n'
         f'{picture("karyotype", "Language karyotype", width="100%")}\n\n'
         f'<sub>One chromosome per language · height by bytes · bands by repo</sub>\n\n'
-        + hero("spindle", "The language chromosomes at metaphase on a glowing spindle") +
-        f'<sub><b>Metaphase</b> · the same chromosomes lined up on the spindle.</sub>\n\n'
-        f'<sub>Grab it and turn it:</sub>\n\n'
-        f'```stl\n{spindle}\n```')
+        + hero("spindle", "The language chromosomes at metaphase on a glowing spindle. Open it in 3D", "spindle.stl") +
+        f'<sub><b>Metaphase</b> · the same chromosomes lined up on the spindle · '
+        f'<a href="{LAB}/assets/spindle.stl">turn it in 3D</a></sub>')
     phylo = (
         f'{picture("phylogeny", "Phylogeny of repositories", width="100%")}\n\n'
         f'<sub>Re-grown every night from each repo\'s language mix.</sub>')

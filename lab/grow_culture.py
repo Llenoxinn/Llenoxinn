@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Grow this week's culture: assets/culture-{dark,light}.gif
+"""Grow this week's culture: assets/culture-{dark,light}.webp
 
 A Gray-Scott reaction-diffusion culture filmed as it grows, seeded by the ISO
-week in Manila, so the regime and pattern change every Monday.
+week in Manila, so the regime and pattern change every Monday. The dish has no
+rim: the medium is the page colour and the culture dissolves into it at the edges.
 
     dA/dt = Da lap(A) - A B^2 + F (1 - A)
     dB/dt = Db lap(B) + A B^2 - (F + k) B
@@ -16,15 +17,16 @@ import hashlib
 import numpy as np
 from PIL import Image
 
-from notebook import ASSETS, LAB, now_manila, replace_block
+from notebook import ASSETS, THEMES, now_manila, replace_block
 
 GW, GH, SCALE = 220, 66, 3          # grid cells and pixels per cell -> 660 x 198
 STEPS, HOLD = 5200, 14
+FEATHER = 36                        # pixels over which the culture fades into the page
 SHOTS = sorted({int(30 * 1.105 ** i) for i in range(48)} | {STEPS - 1})   # dense early, sparse late
 REGIMES = [("coral", 0.0545, 0.0620), ("mitosis", 0.0367, 0.0649), ("fingerprint", 0.0370, 0.0600),
            ("spots", 0.0300, 0.0620), ("maze", 0.0290, 0.0570)]
-PALETTES = {"dark": ["#07020a", "#2a0410", "#8b0018", "#ff1f3d", "#ffd6dc"],
-            "light": ["#ffffff", "#ffe3e7", "#ff5c72", "#c1001f", "#3d0010"]}
+PALETTES = {"dark": [THEMES["dark"]["bg"], "#2a0410", "#8b0018", "#ff1f3d", "#ffd6dc"],
+            "light": [THEMES["light"]["bg"], "#ffe3e7", "#ff5c72", "#c1001f", "#3d0010"]}
 
 
 def lap(Z):
@@ -67,15 +69,21 @@ def main():
         if s in SHOTS:
             frames.append(np.clip(B / 0.40, 0, 1))
     frames += [frames[-1]] * HOLD
+    # Scale the culture toward nothing (the page colour) at the edges instead of cropping it.
+    W, H = GW * SCALE, GH * SCALE
+    ramp = lambda n: np.clip(np.minimum(np.arange(n), np.arange(n)[::-1]) / FEATHER, 0, 1)
+    edge = np.outer(ramp(H), ramp(W)) ** 0.8
     for theme, stops in PALETTES.items():
-        imgs = [Image.fromarray(colour(f, stops)).resize((GW * SCALE, GH * SCALE), Image.BICUBIC)
-                .quantize(colors=32, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE) for f in frames]
-        out = ASSETS / f"culture-{theme}.gif"
-        imgs[0].save(out, save_all=True, append_images=imgs[1:], duration=90, loop=0, optimize=True, disposal=1)
+        imgs = []
+        for f in frames:
+            big = np.asarray(Image.fromarray((f * 255).astype(np.uint8)).resize((W, H), Image.BICUBIC), np.float32) / 255
+            imgs.append(Image.fromarray(colour(big * edge, stops)))
+        out = ASSETS / f"culture-{theme}.webp"
+        imgs[0].save(out, save_all=True, append_images=imgs[1:], duration=90, loop=0, quality=85, method=4)
         print(f"wrote {out.name} ({out.stat().st_size // 1024} KB, {len(imgs)} frames)")
     from notebook import picture
     replace_block("CULTURE", (
-        f'{picture("culture", f"Gray-Scott culture, {name} regime, growing", width="100%", ext="gif", query="v=" + seed)}\n\n'
+        f'{picture("culture", f"Gray-Scott culture, {name} regime, growing", width="100%", ext="webp", query="v=" + seed)}\n\n'
         f'<sub><b>Fig. 2</b> This week\'s culture · Gray-Scott, <i>{name}</i> regime · re-plated every Monday</sub>'))
 
 
