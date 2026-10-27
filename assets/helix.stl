@@ -9241,58 +9241,58 @@ endloop
 endfacet
 facet normal 0.5 0.4 0.8
 outer loop
-vertex 581 301 -80
-vertex 543 312 -65
-vertex 560 274 -55
+vertex 594 307 -82
+vertex 546 321 -61
+vertex 568 273 -49
 endloop
 endfacet
 facet normal 0.2 1 -0.2
 outer loop
-vertex 581 301 -80
-vertex 547 303 -106
-vertex 543 312 -65
+vertex 594 307 -82
+vertex 551 310 -114
+vertex 546 321 -61
 endloop
 endfacet
 facet normal 0.9 -0.5 0.2
 outer loop
-vertex 581 301 -80
-vertex 560 274 -55
-vertex 564 265 -96
+vertex 594 307 -82
+vertex 568 273 -49
+vertex 573 262 -102
 endloop
 endfacet
 facet normal 0.6 0.1 -0.8
 outer loop
-vertex 581 301 -80
-vertex 564 265 -96
-vertex 547 303 -106
+vertex 594 307 -82
+vertex 573 262 -102
+vertex 551 310 -114
 endloop
 endfacet
 facet normal -0.6 -0.1 0.8
 outer loop
-vertex 526 276 -80
-vertex 560 274 -55
-vertex 543 312 -65
+vertex 525 276 -82
+vertex 568 273 -49
+vertex 546 321 -61
 endloop
 endfacet
 facet normal -0.9 0.5 -0.2
 outer loop
-vertex 526 276 -80
-vertex 543 312 -65
-vertex 547 303 -106
+vertex 525 276 -82
+vertex 546 321 -61
+vertex 551 310 -114
 endloop
 endfacet
 facet normal -0.2 -1 0.2
 outer loop
-vertex 526 276 -80
-vertex 564 265 -96
-vertex 560 274 -55
+vertex 525 276 -82
+vertex 573 262 -102
+vertex 568 273 -49
 endloop
 endfacet
 facet normal -0.5 -0.4 -0.8
 outer loop
-vertex 526 276 -80
-vertex 547 303 -106
-vertex 564 265 -96
+vertex 525 276 -82
+vertex 551 310 -114
+vertex 573 262 -102
 endloop
 endfacet
 endsolid plasmid_pLLX
