@@ -68,7 +68,7 @@ def icon_rows(kind):
 def header(key, path, title, theme, animate=True):
     s, b = SHEET[theme], BRAND
     ts = Typesetter("h")
-    out = [dot_grid(232, H, s["muted"], f"h{key}", opacity=0.18, twinkle=12 if animate else 0, x0=368)]
+    out = [dot_grid(W, H, s["muted"], f"h{key}", opacity=0.22, twinkle=14 if animate else 0, focus=(556, 44, 300))]
     out.append(f'<path d="{TRACE}" fill="none" stroke="{b["neon"]}" stroke-width="1.5" stroke-dasharray="3 4"/>'
                f'<path d="M368 80h8v8h-8Z" fill="{s["muted"]}"/>')
     if animate:

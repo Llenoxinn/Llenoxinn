@@ -10,8 +10,8 @@ Dexter Juevesano's (@Llenoxinn) GitHub profile. The theme is the portfolio's DOS
 - Brief copy. One short line per element; no paragraphs, no copying the portfolio's text word for word.
 - Facts are real. No invented stats, solves, proficiency percentages, roles, proof URLs or tools. Private repos are labelled, never linked.
 - Palette, card tokens and fonts live in `lab/notebook.py` (`BRAND`, `THEMES`, `SHEET`, `FACES`, `TRACK`). Keep data-semantic difficulty and CTF category colours.
-- Every visual ships as `-dark` and `-light`. Anything that loops (hero, section headers) also ships a `-still` twin that `<picture>` serves under `prefers-reduced-motion`; the hero adds `banner-narrow-*` for screens up to 600 px.
-- Cards and tiles animate opacity only, once. Use outlined text, no fonts or icons fetched at render time, no SVG scripts; animation is SMIL.
+- Every visual ships as `-dark` and `-light`. Anything that loops (hero, section headers, project, live and contact cards) also ships a `-still` twin that `<picture>` serves under `prefers-reduced-motion`; the hero adds `banner-narrow-*` for screens up to 600 px.
+- Terminal lines type on a loop with a riding caret (`typed()` in `notebook.py`); other card content fades in once, opacity only. Stack tiles have no loop. Use outlined text, no fonts or icons fetched at render time, no SVG scripts; animation is SMIL.
 - Cards are fixed-size inline images so rows wrap on phones: stack tiles 48 px, project and contact cards 376 px wide, live cards 252 px.
 
 ## Check changes

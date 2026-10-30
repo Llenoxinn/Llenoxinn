@@ -13,8 +13,8 @@ import datetime as dt
 import json
 import urllib.request
 
-from notebook import (ASSETS, BRAND, MANILA, SHEET, STAT_H, STAT_W, THEMES, Typesetter, card, fade, footnote, readout,
-                      replace_block, stamp, strip, strip_tag, svg_doc, themed)
+from notebook import (ASSETS, BRAND, MANILA, SHEET, STAT_H, STAT_W, THEMES, Typesetter, card, footnote, fx, readout,
+                      replace_block, scene, stamp, strip, strip_tag, svg_doc)
 
 HANDLE = "Acetylsphae"
 PROFILE = f"https://leetcode.com/u/{HANDLE}/"
@@ -62,15 +62,16 @@ def day(d):
     return f"{d.day} {d:%b}"
 
 
-def leetcard(v, theme):
+def leetcard(v, theme, animate=True):
     """LeetCode card: problems solved, then one segmented meter per difficulty against the question bank."""
     s = SHEET[theme]
     ts = Typesetter("lc")
     total = v["solved"].get("All", 0)
     head, typed = strip(ts, STAT_W, 0, [("leetcode", BRAND["lavender"]), (" > ", BRAND["neon"]),
-                                        (HANDLE.lower(), BRAND["paper"])], start=0.1, top=True)
-    body = [card(theme, STAT_W, STAT_H), head, strip_tag(ts, STAT_W, "live", live=True),
-            readout(ts, theme, total, "solved", typed + 0.1)]
+                                        (HANDLE.lower(), BRAND["paper"])], start=0.1 if animate else None, top=True)
+    at = (lambda off: typed + off) if animate else (lambda off: None)
+    body = [card(theme, STAT_W, STAT_H), head, strip_tag(ts, STAT_W, "live", live=True, animate=animate),
+            readout(ts, theme, total, "solved", at(0.1))]
     x0, x1, seg = 76, 196, 7.5
     for k, level in enumerate(DIFF):
         y = 112 + k * 24
@@ -82,10 +83,13 @@ def leetcard(v, theme):
         lit = min(count, -(-got * count // of)) if got and of else 0
         for i in range(count):
             fill = colour if i < lit else s["well"]
-            anim = fade(typed + 0.3 + k * 0.1 + i * 0.03, 0.15) if i < lit else ""
+            anim = fx(at(0.3 + k * 0.1 + i * 0.03), 0.15) if i < lit else ""
+            if animate and i == lit - 1:     # the newest segment keeps charging
+                anim += ('<animate attributeName="opacity" values="1;0.3;1" dur="1.6s" begin="3s" '
+                         'repeatCount="indefinite"/>')
             body.append(f'<rect x="{x0 + i * seg:.1f}" y="{y - 9}" width="{seg - 2}" height="10" rx="1" fill="{fill}">{anim}</rect>')
     latest = f"latest: {v['recent'][0][0]}" if v["recent"] else f"{v['active']} active days"
-    body.append(footnote(ts, theme, latest, typed + 0.9))
+    body.append(footnote(ts, theme, latest, at(0.9)))
     split = ", ".join(f"{v['solved'].get(l, 0)} {l.lower()}" for l in DIFF)
     label = (f"LeetCode @{HANDLE}: {total} problems solved ({split}) over {v['active']} active days"
              + (f"; latest {v['recent'][0][0]}, {day(v['recent'][0][1])}." if v["recent"] else "."))
@@ -96,7 +100,8 @@ def write(v):
     svgs = {theme: leetcard(v, theme) for theme in THEMES}
     for theme, (svg, _) in svgs.items():
         (ASSETS / f"leetcode-{theme}.svg").write_text(svg, encoding="utf-8")
-    pic = themed("leetcode", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
+        (ASSETS / f"leetcode-still-{theme}.svg").write_text(leetcard(v, theme, False)[0], encoding="utf-8")
+    pic = scene("leetcode", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
     changed = replace_block("LEETCODE", f'<a href="{PROFILE}">{pic}</a>')
     print(f"leetcode: {v['solved'].get('All', 0)} solved, README {'updated' if changed else 'unchanged'}")
 

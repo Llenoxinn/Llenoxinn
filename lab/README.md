@@ -42,8 +42,10 @@ On PowerShell, set the token with `$env:GITHUB_TOKEN`. Keep credentials out of s
 
 ## Motion
 
-- The hero and section headers loop softly: twinkling dots, packets on circuit traces, floating toasts, a brief title glitch. Each has a `-still` twin for `prefers-reduced-motion`.
-- Cards and tiles fade in once, in reading order: commands type, numbers appear, heatmaps, meters and wells fill. Nothing moves position.
+- The hero and section headers loop softly: twinkling dots that fade out around the icon, packets on circuit traces, floating toasts, a brief title glitch.
+- Every terminal line (hero pill, project stacks, live commands, contact URLs) types, holds, clears and types again, with a caret that rides along and blinks.
+- Live cards keep a quiet pulse: today's heatmap cell breathes, the newest LeetCode segment charges, a scan line sweeps the picoGym plate; project icons get a passing scan line.
+- Everything that loops ships a `-still` twin for `prefers-reduced-motion`. Other card content fades in once, in reading order. Nothing moves position except the hero.
 - SMIL runs only while an image is on screen, so cards animate as they scroll into view.
 
 ## Lab rounds

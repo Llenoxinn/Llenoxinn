@@ -4,8 +4,8 @@
 The hero comes in a wide and a narrow (phone) layout, each animated and still;
 <picture> picks one by screen width and prefers-reduced-motion.
 """
-from notebook import (ASSETS, BRAND, SHEET, THEMES, Typesetter, bob, card, caret, dot_grid, fade, mark, packet,
-                      pixels, rise, strip, svg_doc, text_width)
+from notebook import (ASSETS, BRAND, SHEET, THEMES, Typesetter, bob, card, dot_grid, fx, mark, packet, pixels, rise,
+                      strip, svg_doc, text_width, typed)
 from pixel import SCIENTIST, sprite
 
 TITLE = "/dev/dexter"
@@ -91,11 +91,8 @@ def banner(theme, animate=True, layout="wide"):
     pill = [f'<rect x="{px:.1f}" y="{py}" width="{pw:.1f}" height="44" rx="4" fill="#ffffff"/>',
             ts.text("$ ", "code", size, px + 20, base, b["neon"])[0]]
     sx = px + 20 + text_width("$ ", "code", size)
-    typed, done = ts.text(COMMAND, "code", size, sx, base, b["ink"], reveal=(0.6, 0.03) if animate else None)
-    pill.append(typed)
-    end = sx + text_width(COMMAND, "code", size) + 3
-    pill.append(caret(end, py + 14, 8, 17, b["neon"], done) if animate
-                else f'<rect x="{end:.1f}" y="{py + 14}" width="8" height="17" fill="{b["neon"]}"/>')
+    line, _ = typed(ts, [(COMMAND, b["ink"])], sx, base, size, 0.6 if animate else None, caret_colour=b["neon"])
+    pill.append(line)
     pill.append(f'<path d="M{px + pw - 32:.1f} {py + 13}h10v3h-7v14h-3Z M{px + pw - 27:.1f} {py + 18}h11v15h-11Z" '
                 f'fill="none" stroke="{b["ink"]}" stroke-width="1.5"/>')
     out.append(part("".join(pill), rise(0.3, 10, 0.4)))
@@ -123,13 +120,13 @@ CONTACTS = [("linkedin", "LinkedIn", "linkedin.com/in/dsjuevesano", "Say hello")
 CONTACT_W, CONTACT_H = 376, 96
 
 
-def contact(key, label, url, action, theme):
+def contact(key, label, url, action, theme, animate=True):
     s = SHEET[theme]
     ts = Typesetter("ct")
-    head, typed = strip(ts, CONTACT_W, 0, [("$ ", BRAND["neon"]), (f"open {url}", BRAND["paper"])],
-                        start=0.15, rate=0.018, top=True)
+    head, done = strip(ts, CONTACT_W, 0, [("$ ", BRAND["neon"]), (f"open {url}", BRAND["paper"])],
+                       start=0.3 if animate else None, rate=0.04, top=True)
     body = (card(theme, CONTACT_W, CONTACT_H) + head
-            + f'<g opacity="1">{fade(typed + 0.05)}'
+            + f'<g opacity="1">{fx(done + 0.05 if animate else None)}'
             + mark(key, 16, 46, 32, s["text"])
             + ts.text(label, "label", 17, 62, 63, s["text"])[0]
             + ts.text(action, "text", 13, 62, 82, s["muted"])[0]
@@ -144,4 +141,6 @@ if __name__ == "__main__":
             (ASSETS / f"{stem}-still-{theme}.svg").write_text(banner(theme, False, layout), encoding="utf-8")
         for key, label, url, action in CONTACTS:
             (ASSETS / f"contact-{key}-{theme}.svg").write_text(contact(key, label, url, action, theme), encoding="utf-8")
+            (ASSETS / f"contact-{key}-still-{theme}.svg").write_text(contact(key, label, url, action, theme, False),
+                                                                    encoding="utf-8")
     print("wrote the wide and narrow hero, their stills and the contact cards")

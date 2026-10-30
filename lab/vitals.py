@@ -23,8 +23,8 @@ import urllib.request
 
 import numpy as np
 
-from notebook import (ASSETS, BRAND, LAB, SHEET, STAT_H, STAT_W, THEMES, USER, Typesetter, card, esc, fade, footnote,
-                      now_manila, picture, readout, replace_block, stamp, strip, strip_tag, svg_doc, text_width, themed)
+from notebook import (ASSETS, BRAND, LAB, SHEET, STAT_H, STAT_W, THEMES, USER, Typesetter, card, esc, footnote, fx,
+                      now_manila, picture, readout, replace_block, scene, stamp, strip, strip_tag, svg_doc, text_width)
 
 PROFILE_REPO = USER                 # the profile repo itself: lab code, not your work
 DRAWER = {"Protein-Structure-Viewer-Lite-": "Helix threejsensis", "dexterslab": "Pixel laboratory",
@@ -250,14 +250,15 @@ def monitor(v, theme):
 
 # ------------------------------------------------------------------ contribution calendar
 
-def calendar(v, theme):
+def calendar(v, theme, animate=True):
     """Contributions card: the year's total, then the last 26 weeks as a heatmap that fills left to right."""
     s = SHEET[theme]
     ts = Typesetter("cal")
     head, typed = strip(ts, STAT_W, 0, [("github", BRAND["lavender"]), (" > ", BRAND["neon"]),
-                                        ("contributions", BRAND["paper"])], start=0.1, top=True)
-    body = [card(theme, STAT_W, STAT_H), head, strip_tag(ts, STAT_W, "live", live=True),
-            readout(ts, theme, v["total"], "in 12 months", typed + 0.1)]
+                                        ("contributions", BRAND["paper"])], start=0.1 if animate else None, top=True)
+    at = (lambda off: typed + off) if animate else (lambda off: None)
+    body = [card(theme, STAT_W, STAT_H), head, strip_tag(ts, STAT_W, "live", live=True, animate=animate),
+            readout(ts, theme, v["total"], "in 12 months", at(0.1))]
     dates = [dt.date.fromisoformat(d) for d in v["dates"]]
     if dates:
         first = dates[-1] - dt.timedelta(days=(dates[-1].weekday() + 1) % 7 + 25 * 7)   # Sunday, 26 weeks back
@@ -271,12 +272,17 @@ def calendar(v, theme):
             col, row = (date - first).days // 7, (date.weekday() + 1) % 7
             level = 1 + sum(count > c for c in cuts) if count else 0
             x, y = 14 + col * pitch, 102 + row * pitch
-            anim = fade(typed + 0.25 + col * 0.03, 0.2) if count else ""
+            anim = fx(at(0.25 + col * 0.03), 0.2) if count else ""
             cells.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size}" height="{size}" rx="1" '
                          f'fill="{s["heat"][level]}">{anim}</rect>')
+        # today, outlined; it breathes while the card is on screen
+        breathe = ('<animate attributeName="opacity" values="1;0.2;1" dur="2.2s" begin="3s" '
+                   'repeatCount="indefinite"/>') if animate else ""
+        cells.append(f'<rect x="{x - 1.5:.1f}" y="{y - 1.5:.1f}" width="{size + 3}" height="{size + 3}" rx="2" '
+                     f'fill="none" stroke="{s["text"]}" stroke-width="1.2">{breathe}</rect>')
         body.append(f'<g>{"".join(cells)}</g>')
     days = "day" if v["current"] == 1 else "days"
-    body.append(footnote(ts, theme, f"{v['last7']} this week · streak {v['current']} {days}", typed + 1.1))
+    body.append(footnote(ts, theme, f"{v['last7']} this week · streak {v['current']} {days}", at(1.1)))
     label = (f"GitHub contributions for @{USER}: {v['total']} in the last 12 months, {v['last7']} in the last 7 days, "
              f"current streak {v['current']} {days}, best {v['longest']}.")
     return svg_doc(STAT_W, STAT_H, ts.defs_svg() + "".join(body), label), label
@@ -287,7 +293,8 @@ def write_contributions(v):
     svgs = {theme: calendar(v, theme) for theme in THEMES}
     for theme, (svg, _) in svgs.items():
         (ASSETS / f"contributions-{theme}.svg").write_text(svg, encoding="utf-8")
-    pic = themed("contributions", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
+        (ASSETS / f"contributions-still-{theme}.svg").write_text(calendar(v, theme, False)[0], encoding="utf-8")
+    pic = scene("contributions", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
     return replace_block("CONTRIBUTIONS", f'<a href="https://github.com/{USER}">{pic}</a>')
 
 

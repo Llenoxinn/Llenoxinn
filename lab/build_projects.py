@@ -10,8 +10,8 @@ rather than linked to a page that would 404.
 """
 import math
 
-from notebook import (ASSETS, BRAND, SHEET, STRIP, Typesetter, card, fade, replace_block, strip, svg_doc,
-                      text_width, themed)
+from notebook import (ASSETS, BRAND, SHEET, STRIP, Typesetter, card, fx, pixels, replace_block, scene, strip,
+                      svg_doc, text_width)
 
 GITHUB = "https://github.com/Llenoxinn"
 PROJECTS = [
@@ -30,6 +30,9 @@ PROJECTS = [
     dict(name="viscal", repo="viscal", art="lissajous",
          line="Generative art from pure math.", detail="Lissajous · L-systems · Gray–Scott",
          stack=[("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS")]),
+    dict(name="Perk the Star", repo="GeoCeff/perk-the-star", art="orbit",
+         line="Rotating towers defend the Sun.", detail="Godot 4.6 orbital tower defense, built with GeoCeff",
+         stack=[("godot", "Godot"), ("c++", "C++"), ("gdscript", "GDScript")]),
     dict(name="PhyTree", repo=None, art="tree",
          line="Trees of life, built step by step.", detail="Alignment · UPGMA · Neighbor-Joining",
          stack=[("ts", "TypeScript"), ("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"),
@@ -123,13 +126,42 @@ def art_tree():
     return cells
 
 
-ARTS = dict(sylvi=art_sylvi, collatz=art_collatz, helix=art_helix, lissajous=art_lissajous, tree=art_tree)
+def art_orbit():
+    """The Sun, two orbits and the towers riding them."""
+    cells, c = {}, 9.5
+    for i in range(400):
+        a = 2 * math.pi * i / 400
+        for r in (5.2, 8.6):
+            cells.setdefault((round(c + r * math.cos(a)), round(c + r * math.sin(a))), "N")
+    for x in range(20):
+        for y in range(20):
+            d = math.hypot(x - c, y - c)
+            if d <= 2.4:
+                cells[(x, y)] = "P"
+            elif d <= 3.2:
+                cells[(x, y)] = "L"
+    for r, angles in ((5.2, (30, 210)), (8.6, (100, 250, 340))):
+        for deg in angles:
+            tx, ty = round(c + r * math.cos(math.radians(deg))), round(c + r * math.sin(math.radians(deg)))
+            for dx in (0, 1):
+                for dy in (0, 1):
+                    cells[(tx + dx - 1, ty + dy - 1)] = "P"
+    return cells
+
+
+ARTS = dict(sylvi=art_sylvi, collatz=art_collatz, helix=art_helix, lissajous=art_lissajous, tree=art_tree,
+            orbit=art_orbit)
+
+
+LOCK = [".XXXX.", "XX..XX", "XX..XX", "XXXXXX", "XXX.XX", "XXX.XX", "XXXXXX"]
 
 
 def icon(project, x, y, delay):
-    """The pixel drawing on its ink square; rows appear top to bottom, like a slow scan."""
+    """The pixel drawing on its ink square. Rows appear top to bottom on load; after that
+    a faint scan line passes over it every few seconds. delay=None draws it still."""
     colours = dict(P=BRAND["paper"], L=BRAND["lavender"], N=BRAND["neon"], D=BRAND["deep"])
     cells = ARTS[project["art"]]()
+    size = GRID * PIXEL
     rows = []
     for r in range(GRID):
         paths = []
@@ -139,32 +171,53 @@ def icon(project, x, y, delay):
             if d:
                 paths.append(f'<path d="{d}" fill="{colour}"/>')
         if paths:
-            rows.append(f'<g opacity="1">{fade(delay + r * 0.025, 0.12)}{"".join(paths)}</g>')
-    return (f'<rect x="{x}" y="{y}" width="{GRID * PIXEL}" height="{GRID * PIXEL}" rx="5" fill="{BRAND["ink"]}"/>'
-            f'<g shape-rendering="crispEdges">{"".join(rows)}</g>')
+            rows.append(f'<g opacity="1">{fx(None if delay is None else delay + r * 0.025, 0.12)}{"".join(paths)}</g>')
+    scan = ""
+    if delay is not None:
+        scan = (f'<clipPath id="iconclip"><rect x="{x}" y="{y}" width="{size}" height="{size}" rx="5"/></clipPath>'
+                f'<rect clip-path="url(#iconclip)" x="{x}" y="{y - 6}" width="{size}" height="6" fill="{BRAND["lavender"]}" opacity="0.35">'
+                f'<animate attributeName="y" values="{y - 6};{y - 6};{y + size}" keyTimes="0;0.7;1" dur="5s" '
+                f'begin="1.5s" repeatCount="indefinite"/></rect>')
+    return (f'<rect x="{x}" y="{y}" width="{size}" height="{size}" rx="5" fill="{BRAND["ink"]}"/>'
+            f'<g shape-rendering="crispEdges">{"".join(rows)}</g>{scan}')
 
 
-def project_card(p, theme):
+def private_pill(ts, theme, right, y):
+    """A soft pill with a pixel lock, the same family as the CTF result tags."""
+    s = SHEET[theme]
+    tw = text_width("private", "code", 12)
+    w = 8 + 9 + 6 + tw + 9
+    x = right - w
+    return (f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="20" rx="4" fill="{s["soft"]}"/>'
+            + pixels(LOCK, x + 8, y + 5, 1.5, {"X": s["text"]})
+            + ts.text("private", "code", 12, x + 8 + 9 + 6, y + 14.5, s["text"])[0]), x
+
+
+def repo_url(repo):
+    return f"https://github.com/{repo}" if "/" in repo else f"{GITHUB}/{repo}"
+
+
+def project_card(p, theme, animate=True):
     s = SHEET[theme]
     ts = Typesetter("p")
-    body = [card(theme, CARD_W, CARD_H), icon(p, 16, 10, 0.05)]
+    body = [card(theme, CARD_W, CARD_H), icon(p, 16, 10, 0.05 if animate else None)]
     status = "public" if p["repo"] else "private"
     room = CARD_W - 88 - 16
-    if not p["repo"]:     # a lock and a word, so the missing link reads as deliberate
-        tag = ts.text("private", "code", 12, CARD_W - 14, 30, s["muted"], anchor="end")[0]
-        lx = CARD_W - 14 - text_width("private", "code", 12) - 14
-        body.append(tag + f'<path d="M{lx + 2} 21v-2a3 3 0 0 1 6 0v2" fill="none" stroke="{s["muted"]}" stroke-width="1.5"/>'
-                    f'<rect x="{lx}" y="21" width="10" height="9" rx="1.5" fill="{s["muted"]}"/>')
-        room = lx - 8 - 88
+    if not p["repo"]:     # labelled, so the missing link reads as deliberate
+        pill, px = private_pill(ts, theme, CARD_W - 12, 12)
+        body.append(pill)
+        room = px - 8 - 88
     size = 18
     while text_width(p["name"], "label", size) > room:
         size -= 1
-    body.append(f'<g opacity="1">{fade(0.2)}{ts.text(p["name"], "label", size, 88, 38, s["text"])[0]}</g>')
-    body.append(f'<g opacity="1">{fade(0.3)}{ts.text(p["line"], "text", 14, 88, 60, s["muted"])[0]}</g>')
+    body.append(f'<g opacity="1">{fx(0.2 if animate else None)}{ts.text(p["name"], "label", size, 88, 38, s["text"])[0]}</g>')
+    body.append(f'<g opacity="1">{fx(0.3 if animate else None)}{ts.text(p["line"], "text", 14, 88, 60, s["muted"])[0]}</g>')
     names = "  ".join(short for short, _ in p["stack"])
-    svg, _ = strip(ts, CARD_W, CARD_H - STRIP, [("$ ", BRAND["neon"]), (names, BRAND["paper"])], start=0.5, rate=0.012)
+    svg, _ = strip(ts, CARD_W, CARD_H - STRIP, [("$ ", BRAND["neon"]), (names, BRAND["paper"])],
+                   start=0.6 if animate else None, rate=0.045)
     body.append(svg)
-    alt = (f"{p['name']}, {status} repository: {p['line']} {p['detail']}. "
+    owner = f", with {p['repo'].split('/')[0]}" if p["repo"] and "/" in p["repo"] else ""
+    alt = (f"{p['name']}, {status} repository{owner}: {p['line']} {p['detail']}. "
            f"Built with {', '.join(full for _, full in p['stack'])}.")
     return svg_doc(CARD_W, CARD_H, ts.defs_svg() + "".join(body), alt), alt
 
@@ -177,8 +230,8 @@ def block():
     cells = []
     for p in PROJECTS:
         _, alt = project_card(p, "light")
-        pic = themed(f"projects/{slug(p['name'])}", alt, CARD_W, CARD_H)
-        cells.append(f'<a href="{GITHUB}/{p["repo"]}">{pic}</a>' if p["repo"] else pic)
+        pic = scene(f"projects/{slug(p['name'])}", alt, CARD_W, CARD_H)
+        cells.append(f'<a href="{repo_url(p["repo"])}">{pic}</a>' if p["repo"] else pic)
     return '<p align="center">\n' + "\n".join(cells) + "\n</p>"
 
 
@@ -190,5 +243,6 @@ if __name__ == "__main__":
     for theme in SHEET:
         for p in PROJECTS:
             (out / f"{slug(p['name'])}-{theme}.svg").write_text(project_card(p, theme)[0], encoding="utf-8")
+            (out / f"{slug(p['name'])}-still-{theme}.svg").write_text(project_card(p, theme, False)[0], encoding="utf-8")
     changed = replace_block("PROJECTS", block())
     print(f"wrote {len(PROJECTS)} project cards per theme, README {'updated' if changed else 'unchanged'}")

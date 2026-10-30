@@ -4,6 +4,7 @@ Every image in the lab draws its lettering as vector paths from the fonts in
 lab/fonts, so GitHub shows the same type to everyone, whatever fonts they have.
 """
 import datetime as dt
+import math
 import random
 import re
 from functools import lru_cache
@@ -93,13 +94,15 @@ def stamp(*parts):
     return hashlib.sha1("".join(parts).encode()).hexdigest()[:8]
 
 
-def scene(stem, alt, width="100%", folder="assets"):
+def scene(stem, alt, width="100%", height=None, folder="assets", query=""):
     """<picture> for an animated image: a still for reduced motion, then dark/light."""
+    q = f"?{query}" if query else ""
+    size = f' width="{width}"' + (f' height="{height}"' if height else "")
     return (f'<picture>'
-            f'<source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="{folder}/{stem}-still-dark.svg">'
-            f'<source media="(prefers-reduced-motion: reduce)" srcset="{folder}/{stem}-still-light.svg">'
-            f'<source media="(prefers-color-scheme: dark)" srcset="{folder}/{stem}-dark.svg">'
-            f'<img src="{folder}/{stem}-light.svg" alt="{esc(alt)}" width="{width}"></picture>')
+            f'<source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="{folder}/{stem}-still-dark.svg{q}">'
+            f'<source media="(prefers-reduced-motion: reduce)" srcset="{folder}/{stem}-still-light.svg{q}">'
+            f'<source media="(prefers-color-scheme: dark)" srcset="{folder}/{stem}-dark.svg{q}">'
+            f'<img src="{folder}/{stem}-light.svg{q}" alt="{esc(alt)}"{size}></picture>')
 
 
 def themed(stem, alt, width=None, height=None, folder="assets", title=None, attrs="", query=""):
@@ -182,10 +185,16 @@ def packet(path, colour, dur, begin=0.0, size=6):
             f'begin="{begin}s" repeatCount="indefinite"/></rect>')
 
 
-def dot_grid(w, h, colour, seed, pitch=20, opacity=0.14, twinkle=0, x0=0, y0=0):
-    """A faint dot matrix; `twinkle` of its dots slowly brighten and fade, out of step."""
+def dot_grid(w, h, colour, seed, pitch=20, opacity=0.14, twinkle=0, x0=0, y0=0, focus=None):
+    """A faint dot matrix; `twinkle` of its dots slowly brighten and fade, out of step.
+
+    focus=(cx, cy, r) fades the field out radially from that point, so it has no edge.
+    """
     rng = random.Random(seed)
     dots = [(x, y) for x in range(x0 + pitch // 2, x0 + w, pitch) for y in range(y0 + pitch // 2, y0 + h, pitch)]
+    if focus:
+        cx, cy, r = focus
+        dots = [(x, y) for x, y in dots if math.hypot(x - cx, y - cy) < r]
     d = "".join(f"M{x - 1} {y - 1}h2v2h-2Z" for x, y in dots)
     out = [f'<path d="{d}" fill="{colour}" opacity="{opacity}"/>']
     for x, y in rng.sample(dots, min(twinkle, len(dots))):
@@ -193,7 +202,16 @@ def dot_grid(w, h, colour, seed, pitch=20, opacity=0.14, twinkle=0, x0=0, y0=0):
         out.append(f'<rect x="{x - 1.5}" y="{y - 1.5}" width="3" height="3" fill="{colour}" opacity="0">'
                    f'<animate attributeName="opacity" values="0;0.85;0" dur="{dur:.1f}s" '
                    f'begin="{rng.uniform(0, 4):.1f}s" repeatCount="indefinite"/></rect>')
-    return "".join(out)
+    if not focus:
+        return "".join(out)
+    cx, cy, r = focus
+    uid = "dots" + re.sub(r"\W", "", str(seed))
+    return (f'<defs><radialGradient id="{uid}g" gradientUnits="userSpaceOnUse" cx="{cx}" cy="{cy}" r="{r}">'
+            f'<stop offset="0" stop-color="#fff"/><stop offset="0.35" stop-color="#fff" stop-opacity="0.9"/>'
+            f'<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'
+            f'<mask id="{uid}m" maskUnits="userSpaceOnUse" x="{x0}" y="{y0}" width="{w}" height="{h}">'
+            f'<rect x="{x0}" y="{y0}" width="{w}" height="{h}" fill="url(#{uid}g)"/></mask></defs>'
+            f'<g mask="url(#{uid}m)">{"".join(out)}</g>')
 
 
 def bob(dy=4, dur=4.0, begin=0.0):
@@ -236,35 +254,77 @@ def card(theme, w, h, radius=6):
             f'stroke="{s["edge"]}" stroke-width="1.5"/>')
 
 
-def strip(ts, w, y, parts, start=None, rate=0.022, radius=6, top=False):
-    """An ink terminal strip. parts = [(text, colour), ...]; types itself out from `start`.
+HOLD = 4.0     # seconds a typed line rests before it clears and types again
 
-    Returns (svg, time typing ends). top=True rounds the top corners instead of the bottom.
+
+def typed(ts, parts, x, y, size, start, rate=0.05, hold=HOLD, caret_colour=None, face="code"):
+    """A terminal line that types itself, holds, clears and types again, with a caret
+    that rides along and blinks. parts = [(text, colour), ...]. start=None draws the
+    finished line with a steady caret (the reduced-motion still).
+
+    Returns (svg, time the first pass finishes typing).
+    """
+    text = "".join(t for t, _ in parts)
+    n = len(text)
+    end = x + text_width(text, face, size)
+    h, dy = round(size * 1.05), round(size * 0.85)
+    period = (start or 0) + n * rate + hold
+    clear = period - 0.35
+    out, t, offset = [], start, 0
+    for part, colour in parts:
+        px = x + text_width(text[:offset], face, size)
+        loop = (t, rate, period, clear) if start is not None else None
+        out.append(ts.text(part, face, size, px, y, colour, loop=loop)[0])
+        if start is not None:
+            t += len(part) * rate
+        offset += len(part)
+    if start is None:
+        if caret_colour:
+            out.append(f'<rect x="{end + 2:.1f}" y="{y - dy}" width="{size * 0.56:.1f}" height="{h}" fill="{caret_colour}"/>')
+        return "".join(out), 0
+    if caret_colour:
+        xs = [x + text_width(text[:k], face, size) + 2 for k in range(n + 1)]
+        times = [0] + [start + k * rate for k in range(n)] + [clear]
+        values = [xs[0]] + xs[1:] + [xs[0]]
+        out.append(f'<rect x="{end + 2:.1f}" y="{y - dy}" width="{size * 0.56:.1f}" height="{h}" fill="{caret_colour}">'
+                   f'<animate attributeName="x" values="{";".join(f"{v:.1f}" for v in values)}" '
+                   f'keyTimes="{";".join(f"{v / period:.4f}" for v in times)}" calcMode="discrete" '
+                   f'dur="{period:.2f}s" repeatCount="indefinite"/>'
+                   f'<animate attributeName="opacity" values="1;0" keyTimes="0;0.5" calcMode="discrete" '
+                   f'dur="1.06s" repeatCount="indefinite"/></rect>')
+    return "".join(out), start + n * rate
+
+
+def strip(ts, w, y, parts, start=None, rate=0.05, radius=6, top=False):
+    """An ink terminal strip. parts = [(text, colour), ...]; a leading "$ " prompt stays
+    put and the rest types on a loop from `start` (None: finished, for stills).
+
+    Returns (svg, time the first pass finishes). top=True rounds the top corners.
     """
     b = BRAND
     if top:
         shape = f'M1 {y + STRIP}V{y + radius + 1}Q1 {y + 1} {radius + 1} {y + 1}H{w - radius - 1}Q{w - 1} {y + 1} {w - 1} {y + radius + 1}V{y + STRIP}Z'
     else:
         shape = f'M1 {y}H{w - 1}V{y + STRIP - radius - 1}Q{w - 1} {y + STRIP - 1} {w - radius - 1} {y + STRIP - 1}H{radius + 1}Q1 {y + STRIP - 1} 1 {y + STRIP - radius - 1}Z'
-    out, x, t = [f'<path d="{shape}" fill="{b["ink"]}"/>'], 14, start
-    for text, colour in parts:
-        g, t2 = ts.text(text, "code", 12.5, x, y + 19.5, colour, reveal=(t, rate) if start is not None else None)
-        out.append(g)
-        x += text_width(text, "code", 12.5)
-        t = t2 if start is not None else t
-    if start is not None:
-        out.append(caret(x + 2, y + 9, 7, 13, b["lavender"], t))
-    return "".join(out), (t if start is not None else 0)
+    out, x = [f'<path d="{shape}" fill="{b["ink"]}"/>'], 14
+    if parts and parts[0][0] == "$ ":
+        out.append(ts.text("$ ", "code", 12.5, x, y + 19.5, parts[0][1])[0])
+        x += text_width("$ ", "code", 12.5)
+        parts = parts[1:]
+    line, done = typed(ts, parts, x, y + 19.5, 12.5, start, rate, caret_colour=b["lavender"])
+    out.append(line)
+    return "".join(out), done
 
 
-def strip_tag(ts, w, text, live=False, y=0):
-    """Right-aligned status in a top strip; a live tag's dot pulses three times, then rests."""
+def strip_tag(ts, w, text, live=False, y=0, animate=True):
+    """Right-aligned status in a top strip; a live tag's dot keeps a slow pulse."""
     b = BRAND
     out = ts.text(text, "code", 12, w - 14, y + 19.5, b["lavender"], anchor="end")[0]
     if live:
         cx = w - 14 - text_width(text, "code", 12) - 8
-        out += (f'<circle cx="{cx:.1f}" cy="{y + 15.5}" r="3" fill="{b["paper"]}">'
-                f'<animate attributeName="opacity" values="1;0.25;1" dur="1.2s" begin="0.4s" repeatCount="3"/></circle>')
+        pulse = ('<animate attributeName="opacity" values="1;0.25;1" keyTimes="0;0.5;1" calcMode="spline" '
+                 'keySplines="0.45 0 0.55 1;0.45 0 0.55 1" dur="1.8s" repeatCount="indefinite"/>') if animate else ""
+        out += f'<circle cx="{cx:.1f}" cy="{y + 15.5}" r="3" fill="{b["paper"]}">{pulse}</circle>'
     return out
 
 
@@ -276,7 +336,7 @@ def readout(ts, theme, number, label, delay, x=14, y=82):
     """A big number with its unit, fading in once the command has typed."""
     s = SHEET[theme]
     nw = text_width(str(number), "headline", 30)
-    return (f'<g opacity="1">{fade(delay)}{ts.text(str(number), "headline", 30, x, y, s["text"])[0]}'
+    return (f'<g opacity="1">{fx(delay)}{ts.text(str(number), "headline", 30, x, y, s["text"])[0]}'
             f'{ts.text(label, "text", 14, x + nw + 10, y - 3, s["muted"])[0]}</g>')
 
 
@@ -284,7 +344,12 @@ def footnote(ts, theme, text, delay, y=STAT_H - 16):
     s = SHEET[theme]
     while text_width(text, "code", 12) > STAT_W - 28 and len(text) > 4:
         text = text[:-2].rstrip() + "…"
-    return f'<g opacity="1">{fade(delay)}{ts.text(text, "code", 12, 14, y, s["muted"])[0]}</g>'
+    return f'<g opacity="1">{fx(delay)}{ts.text(text, "code", 12, 14, y, s["muted"])[0]}</g>'
+
+
+def fx(delay, dur=0.3):
+    """fade(), or nothing for a still (delay None)."""
+    return "" if delay is None else fade(delay, dur)
 
 
 # ------------------------------------------------------------------ type as paths
@@ -393,13 +458,15 @@ class Typesetter:
         return self.defs[key][0]
 
     def text(self, text, face, size, x, y, fill, anchor="start", tracking=None, jitter=0.0,
-             opacity=None, reveal=None, seed=0, attrs=""):
+             opacity=None, reveal=None, seed=0, attrs="", loop=None):
+        """loop=(start, rate, period, clear): each glyph appears in turn, all vanish at
+        `clear`, and the cycle repeats every `period` seconds."""
         tracking = TRACK.get(face, 0) * size if tracking is None else tracking
         w = text_width(text, face, size, tracking)
         x -= {"start": 0, "middle": w / 2, "end": w}[anchor]
         rng = random.Random(f"{seed}{text}{face}")
         out = []
-        t = reveal[0] if reveal else 0
+        t = reveal[0] if reveal else (loop[0] if loop else 0)
         for ch in text:
             d, adv = _glyph(ch, face, size)
             if d:
@@ -409,10 +476,17 @@ class Typesetter:
                 if reveal:
                     out.append(f'<use href="#{ref}" xlink:href="#{ref}" x="{x:.1f}" y="{y + dy:.1f}"{ink} opacity="0">'
                                f'<set attributeName="opacity" to="1" begin="{t:.2f}s" fill="freeze"/></use>')
+                elif loop:
+                    _, _, period, clear = loop
+                    out.append(f'<use href="#{ref}" xlink:href="#{ref}" x="{x:.1f}" y="{y + dy:.1f}"{ink} opacity="0">'
+                               f'<animate attributeName="opacity" values="0;1;0" keyTimes="0;{t / period:.4f};{clear / period:.4f}" '
+                               f'calcMode="discrete" dur="{period:.2f}s" repeatCount="indefinite"/></use>')
                 else:
                     out.append(f'<use href="#{ref}" xlink:href="#{ref}" x="{x:.1f}" y="{y + dy:.1f}"{ink}/>')
             if reveal:
                 t += reveal[1]
+            elif loop:
+                t += loop[1]
             x += adv + tracking
         op = f' opacity="{opacity}"' if opacity is not None else ""
         fl = f' fill="{fill}"' if fill else ""

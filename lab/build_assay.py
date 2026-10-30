@@ -10,8 +10,8 @@ public API, so you update that file after solving).
 import datetime as dt
 import json
 
-from notebook import (ASSETS, BRAND, ROOT, SHEET, STAT_H, STAT_W, THEMES, Typesetter, card, esc, fade, footnote,
-                      readout, replace_block, stamp, strip, strip_tag, svg_doc, themed)
+from notebook import (ASSETS, BRAND, ROOT, SHEET, STAT_H, STAT_W, THEMES, Typesetter, card, esc, footnote, fx,
+                      readout, replace_block, scene, stamp, strip, strip_tag, svg_doc)
 
 DATA = ROOT / "lab" / "data" / "picoctf.json"
 # category -> (dark, light); the light set keeps 3:1 against the paper sheet
@@ -40,7 +40,7 @@ def tally(d):
     return cats, order, by_diff, sum(by_diff.values())
 
 
-def plate(d, theme):
+def plate(d, theme, animate=True):
     """picoGym card: flags captured, then a 96-well plate that fills in order with one well per flag."""
     s = SHEET[theme]
     ts = Typesetter("a")
@@ -50,8 +50,9 @@ def plate(d, theme):
     extra = max(0, len(wells) - ROWS * COLS)
     wells = wells[:ROWS * COLS]
     head, typed = strip(ts, STAT_W, 0, [("picoctf", BRAND["lavender"]), (" > ", BRAND["neon"]),
-                                        ("gym", BRAND["paper"])], start=0.1, top=True)
-    body = [card(theme, STAT_W, STAT_H), head, readout(ts, theme, total, "flags", typed + 0.1)]
+                                        ("gym", BRAND["paper"])], start=0.1 if animate else None, top=True)
+    at = (lambda off: typed + off) if animate else (lambda off: None)
+    body = [card(theme, STAT_W, STAT_H), head, readout(ts, theme, total, "flags", at(0.1))]
     if d.get("updated"):
         day = dt.date.fromisoformat(d["updated"])
         body.append(strip_tag(ts, STAT_W, f"logged {day.day} {day:%b}"))
@@ -60,21 +61,27 @@ def plate(d, theme):
         row, col = divmod(i, COLS)
         cx, cy = 14 + pitch * (col + 0.5), 98 + pitch * (row + 0.5)
         fill = CATS[wells[i]][tone] if i < len(wells) else s["well"]
-        anim = fade(typed + 0.25 + i * 0.01, 0.15) if i < len(wells) else ""
+        anim = fx(at(0.25 + i * 0.01), 0.15) if i < len(wells) else ""
         body.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r}" fill="{fill}">{anim}</circle>')
+    if animate:     # a plate reader's light passes over the wells now and then
+        x0, x1 = 10, 14 + pitch * COLS
+        body.append(f'<rect x="{x0}" y="96" width="4" height="{pitch * ROWS + 4:.1f}" rx="2" fill="{s["text"]}" opacity="0">'
+                    f'<animate attributeName="x" values="{x0};{x0};{x1:.1f}" keyTimes="0;0.65;1" dur="6s" begin="3s" '
+                    f'repeatCount="indefinite"/><animate attributeName="opacity" values="0;0;0.3;0.3;0" '
+                    f'keyTimes="0;0.64;0.66;0.98;1" dur="6s" begin="3s" repeatCount="indefinite"/></rect>')
     lx = 14 + pitch * COLS + 14
     for k, cat in enumerate(order[:3]):
         y = 107 + k * 20
-        body.append(f'<g opacity="1">{fade(typed + 0.5 + k * 0.08)}'
+        body.append(f'<g opacity="1">{fx(at(0.5 + k * 0.08))}'
                     f'<rect x="{lx}" y="{y - 8}" width="8" height="8" rx="1" fill="{CATS[cat][tone]}"/>'
                     + ts.text(SHORT[cat], "text", 13, lx + 14, y, s["text"])[0]
                     + ts.text(str(sum(cats[cat].values())), "code-bold", 12, STAT_W - 14, y, s["text"], anchor="end")[0]
                     + "</g>")
     if len(order) > 3:
-        body.append(f'<g opacity="1">{fade(typed + 0.75)}'
+        body.append(f'<g opacity="1">{fx(at(0.75))}'
                     + ts.text(f"+ {len(order) - 3} more", "text", 13, lx + 14, 167, s["muted"])[0] + "</g>")
     split = " · ".join(f"{by_diff[k]} {k}" for k in DIFF if by_diff[k]) or "no flags yet"
-    body.append(footnote(ts, theme, split + (f" · +{extra} off-plate" if extra else ""), typed + 1.2))
+    body.append(footnote(ts, theme, split + (f" · +{extra} off-plate" if extra else ""), at(1.2)))
     label = (f"picoGym progress for @{d.get('username')}: {total} flags captured ({split}). "
              + ", ".join(f"{c} {sum(cats[c].values())}" for c in order) + ".")
     return svg_doc(STAT_W, STAT_H, ts.defs_svg() + "".join(body), label), label
@@ -85,8 +92,9 @@ def main():
     svgs = {theme: plate(d, theme) for theme in THEMES}
     for theme, (svg, _) in svgs.items():
         (ASSETS / f"assay-{theme}.svg").write_text(svg, encoding="utf-8")
+        (ASSETS / f"assay-still-{theme}.svg").write_text(plate(d, theme, False)[0], encoding="utf-8")
     url = d.get("profile_url") or "https://play.picoctf.org"
-    pic = themed("assay", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
+    pic = scene("assay", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
     changed = replace_block("ASSAY", f'<a href="{esc(url)}">{pic}</a>')
     print(f"assay: {tally(d)[3]} solves, README {'updated' if changed else 'unchanged'}")
 
