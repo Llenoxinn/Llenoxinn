@@ -179,7 +179,7 @@ def block():
         _, alt = project_card(p, "light")
         pic = themed(f"projects/{slug(p['name'])}", alt, CARD_W, CARD_H)
         cells.append(f'<a href="{GITHUB}/{p["repo"]}">{pic}</a>' if p["repo"] else pic)
-    return "<p>\n" + "\n".join(cells) + "\n</p>"
+    return '<p align="center">\n' + "\n".join(cells) + "\n</p>"
 
 
 if __name__ == "__main__":

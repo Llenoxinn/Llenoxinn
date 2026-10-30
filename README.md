@@ -20,7 +20,7 @@
 <h3><picture><source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/headers/stack-still-dark.svg"><source media="(prefers-reduced-motion: reduce)" srcset="assets/headers/stack-still-light.svg"><source media="(prefers-color-scheme: dark)" srcset="assets/headers/stack-dark.svg"><img src="assets/headers/stack-light.svg" alt="Tools of the trade." width="100%"></picture></h3>
 
 <!-- STACK:START -->
-<p>
+<p align="center">
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-lang-dark.svg"><img src="assets/stack/group-lang-light.svg" alt="Languages:" title="Languages" width="69" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/c-dark.svg"><img src="assets/stack/c-light.svg" alt="C" title="C" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/cpp-dark.svg"><img src="assets/stack/cpp-light.svg" alt="C++" title="C++" width="48" height="48"></picture>
@@ -61,7 +61,7 @@
 <h3><picture><source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/headers/projects-still-dark.svg"><source media="(prefers-reduced-motion: reduce)" srcset="assets/headers/projects-still-light.svg"><source media="(prefers-color-scheme: dark)" srcset="assets/headers/projects-dark.svg"><img src="assets/headers/projects-light.svg" alt="Built, broken, shipped." width="100%"></picture></h3>
 
 <!-- PROJECTS:START -->
-<p>
+<p align="center">
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/projects/sylvi-dark.svg"><img src="assets/projects/sylvi-light.svg" alt="Sylvi, private repository: ID photo sheets, printed true to size. 1×1, 2×2, passport · PDF, PNG, JPG. Built with TypeScript, JavaScript, React, Vite, PL/pgSQL, HTML, CSS." width="376" height="106"></picture>
 <a href="https://github.com/Llenoxinn/Olatz-Tol-"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/projects/olatz-tol-dark.svg"><img src="assets/projects/olatz-tol-light.svg" alt="Olatz-Tol, public repository: Pick a number. Watch it fall to 1. The Collatz 3n + 1 rule, drawn. Built with React, Vite, Tailwind CSS, Zustand, Lucide." width="376" height="106"></picture></a>
 <a href="https://github.com/Llenoxinn/Protein-Structure-Viewer-Lite-"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/projects/protein-structure-viewer-lite-dark.svg"><img src="assets/projects/protein-structure-viewer-lite-light.svg" alt="Protein Structure Viewer Lite, public repository: Proteins in 3D, on raw Three.js. No NGL, Mol* or 3Dmol.js inside. Built with React, Vite, Three.js, React Three Fiber, Drei, Tailwind CSS." width="376" height="106"></picture></a>
@@ -72,7 +72,7 @@
 
 <h3><picture><source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/headers/live-still-dark.svg"><source media="(prefers-reduced-motion: reduce)" srcset="assets/headers/live-still-light.svg"><source media="(prefers-color-scheme: dark)" srcset="assets/headers/live-dark.svg"><img src="assets/headers/live-light.svg" alt="Live from the lab: GitHub and LeetCode, synced hourly." width="100%"></picture></h3>
 
-<p>
+<p align="center">
 <!-- CONTRIBUTIONS:START -->
 <a href="https://github.com/Llenoxinn"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/contributions-dark.svg?v=174e2d72"><img src="assets/contributions-light.svg?v=174e2d72" alt="GitHub contributions for @Llenoxinn: 188 in the last 12 months, 77 in the last 7 days, current streak 5 days, best 8." width="252" height="212"></picture></a>
 <!-- CONTRIBUTIONS:END -->
@@ -84,14 +84,14 @@
 <!-- ASSAY:END -->
 </p>
 
-<p>
+<p align="center">
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/headers/win-champion-dark.svg"><img src="assets/headers/win-champion-light.svg" alt="Champion: Mission: CTF, UP Computer Science Guild, Sep 2026" width="376" height="72"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/headers/win-hackforgov-dark.svg"><img src="assets/headers/win-hackforgov-light.svg" alt="Top 2 student performer and national wildcard qualifier: HackforGov5 Region 7, DICT, Oct 2026" width="376" height="72"></picture>
 </p>
 
 <h3><picture><source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/headers/contact-still-dark.svg"><source media="(prefers-reduced-motion: reduce)" srcset="assets/headers/contact-still-light.svg"><source media="(prefers-color-scheme: dark)" srcset="assets/headers/contact-dark.svg"><img src="assets/headers/contact-light.svg" alt="Ping me." width="100%"></picture></h3>
 
-<p>
+<p align="center">
 <a href="https://www.linkedin.com/in/dsjuevesano/"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/contact-linkedin-dark.svg"><img src="assets/contact-linkedin-light.svg" alt="LinkedIn: linkedin.com/in/dsjuevesano" width="376" height="96"></picture></a>
 <a href="https://github.com/Llenoxinn"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/contact-github-dark.svg"><img src="assets/contact-github-light.svg" alt="GitHub: github.com/Llenoxinn" width="376" height="96"></picture></a>
 </p>

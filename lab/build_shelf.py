@@ -69,7 +69,7 @@ def block():
                                 title=GROUP[name]))
         else:
             cells.append(themed(f"stack/{slug(name)}", name, TILE, TILE, title=name))
-    return "<p>\n" + "\n".join(cells) + "\n</p>"
+    return '<p align="center">\n' + "\n".join(cells) + "\n</p>"
 
 
 if __name__ == "__main__":
