@@ -35,7 +35,7 @@ def typeset(tex, colour, size=22):
     plt.close(fig)
     svg = buf.getvalue()
     svg = re.sub(r"<metadata>.*?</metadata>", "", svg, flags=re.S)   # drop generator noise
-    return svg
+    return "\n".join(line.rstrip() for line in svg.splitlines()) + "\n"
 
 
 if __name__ == "__main__":

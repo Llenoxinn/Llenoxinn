@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Haskell">
+<g opacity="1"><animate attributeName="opacity" values="0;0;1" keyTimes="0;0.359;1" calcMode="spline" keySplines="0 0 1 1;0.23 1 0.32 1" dur="0.39s" fill="freeze"/><rect x="0.75" y="0.75" width="46.5" height="46.5" rx="6" fill="#10103a" stroke="#34348a" stroke-width="1.5"/><svg x="12" y="12" width="24" height="24" viewBox="0 0 24 24"><path fill="#f6f6fc" d="M0 3.535L5.647 12 0 20.465h4.235L9.883 12 4.235 3.535zm5.647 0L11.294 12l-5.647 8.465h4.235l3.53-5.29 3.53 5.29h4.234L9.883 3.535zm8.941 4.938l1.883 2.822H24V8.473zm2.824 4.232l1.882 2.822H24v-2.822z"/></svg></g>
+</svg>

@@ -23,11 +23,12 @@ import urllib.request
 
 import numpy as np
 
-from notebook import ASSETS, LAB, THEMES, USER, Typesetter, esc, now_manila, picture, replace_block, svg_doc, text_width
+from notebook import (ASSETS, BRAND, LAB, SHEET, STAT_H, STAT_W, THEMES, USER, Typesetter, card, esc, fade, footnote,
+                      now_manila, picture, readout, replace_block, stamp, strip, strip_tag, svg_doc, text_width, themed)
 
 PROFILE_REPO = USER                 # the profile repo itself: lab code, not your work
-DRAWER = {"Protein-Structure-Viewer-Lite-": "Helix threejsensis", "PHY-TREE---Phylogenetic-Tree-Builder": "Arbor alignans",
-          "viscal": "Turingia lissajousii", "perk-the-star": "Solaris turrifera"}
+DRAWER = {"Protein-Structure-Viewer-Lite-": "Helix threejsensis", "dexterslab": "Pixel laboratory",
+          "viscal": "Turingia lissajousii", "Olatz-Tol-": "Grando collatzii"}
 QUERY = """
 query($login: String!) {
   user(login: $login) {
@@ -245,6 +246,49 @@ def monitor(v, theme):
                    f"Vital signs: {v['last7']} contributions in the last 7 days, {v['total']} in the last year, active in "
                    f"{active} of {len(weeks)} weeks, streak {v['current']} days (best {v['longest']}), "
                    f"{v['commits']} commits and {v['prs']} pull requests")
+
+
+# ------------------------------------------------------------------ contribution calendar
+
+def calendar(v, theme):
+    """Contributions card: the year's total, then the last 26 weeks as a heatmap that fills left to right."""
+    s = SHEET[theme]
+    ts = Typesetter("cal")
+    head, typed = strip(ts, STAT_W, 0, [("github", BRAND["lavender"]), (" > ", BRAND["neon"]),
+                                        ("contributions", BRAND["paper"])], start=0.1, top=True)
+    body = [card(theme, STAT_W, STAT_H), head, strip_tag(ts, STAT_W, "live", live=True),
+            readout(ts, theme, v["total"], "in 12 months", typed + 0.1)]
+    dates = [dt.date.fromisoformat(d) for d in v["dates"]]
+    if dates:
+        first = dates[-1] - dt.timedelta(days=(dates[-1].weekday() + 1) % 7 + 25 * 7)   # Sunday, 26 weeks back
+        pitch, size = 8.6, 7
+        active = sorted(c for c in v["days"] if c)        # quartiles of active days, as GitHub shades them
+        cuts = [active[len(active) * q // 4] for q in (1, 2, 3)] if active else []
+        cells = []
+        for date, count in zip(dates, v["days"]):
+            if date < first:
+                continue
+            col, row = (date - first).days // 7, (date.weekday() + 1) % 7
+            level = 1 + sum(count > c for c in cuts) if count else 0
+            x, y = 14 + col * pitch, 102 + row * pitch
+            anim = fade(typed + 0.25 + col * 0.03, 0.2) if count else ""
+            cells.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size}" height="{size}" rx="1" '
+                         f'fill="{s["heat"][level]}">{anim}</rect>')
+        body.append(f'<g>{"".join(cells)}</g>')
+    days = "day" if v["current"] == 1 else "days"
+    body.append(footnote(ts, theme, f"{v['last7']} this week · streak {v['current']} {days}", typed + 1.1))
+    label = (f"GitHub contributions for @{USER}: {v['total']} in the last 12 months, {v['last7']} in the last 7 days, "
+             f"current streak {v['current']} {days}, best {v['longest']}.")
+    return svg_doc(STAT_W, STAT_H, ts.defs_svg() + "".join(body), label), label
+
+
+def write_contributions(v):
+    """Draw the contributions card and fill the CONTRIBUTIONS block. True if the README changed."""
+    svgs = {theme: calendar(v, theme) for theme in THEMES}
+    for theme, (svg, _) in svgs.items():
+        (ASSETS / f"contributions-{theme}.svg").write_text(svg, encoding="utf-8")
+    pic = themed("contributions", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
+    return replace_block("CONTRIBUTIONS", f'<a href="https://github.com/{USER}">{pic}</a>')
 
 
 # ------------------------------------------------------------------ 3D helix
@@ -666,6 +710,7 @@ def phylogeny(repos, theme):
 # ------------------------------------------------------------------ main
 
 def write(v, langs):
+    pulse = write_contributions(v)
     for theme in THEMES:
         (ASSETS / f"vitals-{theme}.svg").write_text(monitor(v, theme), encoding="utf-8")
         (ASSETS / f"karyotype-{theme}.svg").write_text(karyotype(langs, theme), encoding="utf-8")
@@ -710,12 +755,14 @@ def write(v, langs):
     a = replace_block("VITALS", vitals)
     b = replace_block("PHYLOGENY", phylo)
     print(f"vitals: {v['total']} contributions, streak {v['current']}/{v['longest']}, {len(langs)} languages, "
-          f"{v['repo_count']} repos, helix {n} triangles, README {'updated' if a or b else 'unchanged'}")
+          f"{v['repo_count']} repos, helix {n} triangles, README {'updated' if a or b or pulse else 'unchanged'}")
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--from-json", help="read a saved GraphQL `user` object instead of calling the API")
+    ap.add_argument("--telemetry", action="store_true",
+                    help="also draw the old lab telemetry (needs VITALS and PHYLOGENY markers in the README)")
     args = ap.parse_args()
     if args.from_json:
         user = json.load(open(args.from_json))
@@ -729,7 +776,11 @@ def main():
             print(f"::warning::GitHub API unavailable, keeping yesterday's vitals ({e})")
             return
     v = analyse(user)
-    write(v, languages(v["repos"]))
+    if args.telemetry:
+        write(v, languages(v["repos"]))
+    else:
+        changed = write_contributions(v)
+        print(f"contributions: {v['total']} in 12 months, README {'updated' if changed else 'unchanged'}")
 
 
 if __name__ == "__main__":

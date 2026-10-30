@@ -25,8 +25,10 @@ FEATHER = 36                        # pixels over which the culture fades into t
 SHOTS = sorted({int(30 * 1.105 ** i) for i in range(48)} | {STEPS - 1})   # dense early, sparse late
 REGIMES = [("coral", 0.0545, 0.0620), ("mitosis", 0.0367, 0.0649), ("fingerprint", 0.0370, 0.0600),
            ("spots", 0.0300, 0.0620), ("maze", 0.0290, 0.0570)]
-PALETTES = {"dark": [THEMES["dark"]["bg"], "#2a0410", "#8b0018", "#ff1f3d", "#ffd6dc"],
-            "light": [THEMES["light"]["bg"], "#ffe3e7", "#ff5c72", "#c1001f", "#3d0010"]}
+PALETTES = {
+    theme: [t["bg"], t["panel2"], t["red_dim"], t["red"], t["ink"]]
+    for theme, t in THEMES.items()
+}
 
 
 def lap(Z):

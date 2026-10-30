@@ -17,32 +17,41 @@ LAB = "https://github.com/Llenoxinn/Llenoxinn/blob/HEAD"  # absolute: relative l
 USER = "Llenoxinn"
 MANILA = dt.timezone(dt.timedelta(hours=8), "Asia/Manila")
 
+# Notion /dev's pairing: Inter for headlines and text, iA Writer Mono for commands and code.
+# Pixelify stays for the pixel accents.
 FACES = {
-    "display": "Boldonse-Regular.ttf",          # the name and big IDs: heavy, condensed, a little menacing
-    "label": "Jura-Medium.ttf",                 # instrument lettering: labels and readouts
-    "text": "Jura-Medium.ttf",                  # data and captions
-    "wordmark": "Tektur-Medium.ttf",            # base letterforms for the custom name treatment
-    "mono": "GeistMono-Regular.ttf",            # terminal, hex, sequences
-    "mono-bold": "GeistMono-Bold.ttf",
-    "hand": "NothingYouCouldDo-Regular.ttf",    # red-pen margin notes
-    "tape": "BigShoulders-Bold.ttf",            # label-maker tape
+    "headline": "Inter-Bold.otf",
+    "label": "Inter-SemiBold.otf",
+    "text": "Inter-Regular.otf",
+    "code": "iAWriterMonoS-Regular.ttf",
+    "code-bold": "iAWriterMonoS-Bold.ttf",
+    "display": "PixelifySans-Bold.ttf",
+    "wordmark": "PixelifySans-Bold.ttf",
+    "mono": "iAWriterMonoS-Regular.ttf",
+    "mono-bold": "iAWriterMonoS-Bold.ttf",
+    "hand": "Inter-Regular.otf",
+    "tape": "PixelifySans-Bold.ttf",
 }
+# Default tracking per face, in em: tight headlines as on notion.com/product/dev
+TRACK = {"headline": -0.034, "label": -0.01, "code": -0.009, "code-bold": -0.009}
 # older names used around the lab
 FACES.update({"serif": FACES["display"], "type": FACES["text"], "type-bold": FACES["label"]})
 
-# One palette for every figure: the lab is on red alert. "paper" is the aged
-# card stock used for labels in both themes, the way a real label stays cream
-# on a dark cabinet. A/C/G/T keep the standard sequencer colours.
+# The same DOS palette as portfolio-fin/app/globals.css. Page backgrounds stay
+# GitHub-native so the unframed scientific figures blend into the profile.
+BRAND = dict(ink="#1313ba", paper="#f6f6fc", lavender="#cbcbef", neon="#6666fd", deep="#0a0a5d")
+# "red" is the legacy accent key used by the scientific instruments. It now
+# resolves to blue; A/C/G/T retain the sequencer's meaningful base colours.
 THEMES = {
-    "dark": dict(bg="#0d1117", panel="#14070a", panel2="#1f0a10", edge="#5a1622", ink="#f4e9e9",
-                 muted="#b08f93", faint="#2a181c", paper="#efe6cf", paper_ink="#3b2f1c",
-                 pen="#ff5c72", red="#ff1f3d", red_dim="#8b0018", green="#3fb950", blue="#58a6ff",
-                 amber="#ffb02e", orange="#ff7a45", purple="#bc8cff", glow="#ff1f3d",
+    "dark": dict(bg="#0d1117", panel="#101035", panel2=BRAND["deep"], edge="#474780", ink=BRAND["paper"],
+                 muted=BRAND["lavender"], faint="#1b1b3a", paper=BRAND["paper"], paper_ink=BRAND["ink"],
+                 pen=BRAND["lavender"], red=BRAND["neon"], red_dim="#343486", green="#3fb950", blue="#58a6ff",
+                 amber="#ffb02e", orange="#ff7a45", purple="#bc8cff", glow=BRAND["neon"],
                  A="#3fb950", C="#58a6ff", G="#ffb02e", T="#ff1f3d"),
-    "light": dict(bg="#ffffff", panel="#fff6f6", panel2="#ffecec", edge="#efc7c9", ink="#1f1416",
-                  muted="#7a5a5e", faint="#fbeaea", paper="#fbf6e8", paper_ink="#3b2f1c",
-                  pen="#d1002a", red="#e0002a", red_dim="#f7b3bf", green="#1a7f37", blue="#0969da",
-                  amber="#b45309", orange="#c2410c", purple="#8250df", glow="#e0002a",
+    "light": dict(bg="#ffffff", panel=BRAND["paper"], panel2="#e8e8fa", edge=BRAND["lavender"], ink=BRAND["ink"],
+                  muted="#4b4b87", faint="#eeeefa", paper=BRAND["paper"], paper_ink=BRAND["ink"],
+                  pen=BRAND["ink"], red=BRAND["ink"], red_dim=BRAND["lavender"], green="#1a7f37", blue="#0969da",
+                  amber="#b45309", orange="#c2410c", purple="#8250df", glow=BRAND["ink"],
                   A="#1a7f37", C="#0969da", G="#24292f", T="#e0002a"),
 }
 
@@ -76,6 +85,206 @@ def picture(stem, alt, width=None, folder="assets", ext="svg", query=""):
 
 def esc(s):
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def stamp(*parts):
+    """Short content hash: image URLs change only when the picture does."""
+    import hashlib
+    return hashlib.sha1("".join(parts).encode()).hexdigest()[:8]
+
+
+def scene(stem, alt, width="100%", folder="assets"):
+    """<picture> for an animated image: a still for reduced motion, then dark/light."""
+    return (f'<picture>'
+            f'<source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="{folder}/{stem}-still-dark.svg">'
+            f'<source media="(prefers-reduced-motion: reduce)" srcset="{folder}/{stem}-still-light.svg">'
+            f'<source media="(prefers-color-scheme: dark)" srcset="{folder}/{stem}-dark.svg">'
+            f'<img src="{folder}/{stem}-light.svg" alt="{esc(alt)}" width="{width}"></picture>')
+
+
+def themed(stem, alt, width=None, height=None, folder="assets", title=None, attrs="", query=""):
+    """Like picture(), with fixed pixel sizes and a hover title for inline tiles and chips."""
+    size = (f' width="{width}"' if width else "") + (f' height="{height}"' if height else "")
+    tip = f' title="{esc(title)}"' if title else ""
+    q = f"?{query}" if query else ""
+    return (f'<picture><source media="(prefers-color-scheme: dark)" srcset="{folder}/{stem}-dark.svg{q}">'
+            f'<img src="{folder}/{stem}-light.svg{q}" alt="{esc(alt)}"{tip}{size}{attrs}></picture>')
+
+
+# ------------------------------------------------------------------ pixel chrome
+
+def notch(x, y, w, h, s=4):
+    """A rectangle whose corners step in by one pixel block, like the portfolio's panels."""
+    return (f"M{x + s} {y}H{x + w - s}V{y + s}H{x + w}V{y + h - s}H{x + w - s}V{y + h}"
+            f"H{x + s}V{y + h - s}H{x}V{y + s}H{x + s}Z")
+
+
+def mark(name, x, y, size, fill):
+    """A one-colour icon from lab/icons.py, fitted into a size × size box."""
+    from icons import ICONS
+    box, d = ICONS[name.lower()]
+    return (f'<svg x="{x:g}" y="{y:g}" width="{size:g}" height="{size:g}" viewBox="{box}">'
+            f'<path fill="{fill}" d="{d}"/></svg>')
+
+
+# ------------------------------------------------------------------ motion
+# One-shot entrances only. Every animation begins at 0 s and holds its start value
+# until its turn, so renderers without SMIL show the finished picture. Cards and
+# tiles change opacity only; the hero, which also moves, ships a still for
+# prefers-reduced-motion.
+
+EASE_OUT = "0.23 1 0.32 1"
+
+
+def _hold(delay, dur):
+    total = delay + dur
+    return total, f'keyTimes="0;{delay / total:.3f};1" calcMode="spline" keySplines="0 0 1 1;{EASE_OUT}"'
+
+
+def grow(attr, final, delay, dur=0.5):
+    """Hold at zero until `delay`, then ease out to `final`."""
+    total, timing = _hold(delay, dur)
+    return f'<animate attributeName="{attr}" values="0;0;{final}" {timing} dur="{total:.2f}s" fill="freeze"/>'
+
+
+def fade(delay, dur=0.3):
+    return grow("opacity", 1, delay, dur)
+
+
+def rise(delay, dy=12, dur=0.4):
+    """Fade in while settling `dy` px upward. Movement: use only where a still exists."""
+    total, timing = _hold(delay, dur)
+    return (fade(delay, dur) + f'<animateTransform attributeName="transform" type="translate" '
+            f'values="0 {dy};0 {dy};0 0" {timing} dur="{total:.2f}s" fill="freeze"/>')
+
+
+def caret(x, y, w, h, colour, start, blinks=3):
+    """A block caret that appears when typing ends, blinks a few times, then holds steady."""
+    beats = ";".join(["1;0"] * blinks + ["1"])
+    n = 2 * blinks + 1
+    times = ";".join(f"{i / (n - 1):.3f}" for i in range(n))
+    return (f'<rect x="{x:.1f}" y="{y:.1f}" width="{w}" height="{h}" fill="{colour}" opacity="0">'
+            f'<set attributeName="opacity" to="1" begin="{start:.2f}s"/>'
+            f'<animate attributeName="opacity" values="{beats}" keyTimes="{times}" calcMode="discrete" '
+            f'begin="{start:.2f}s" dur="{blinks * 0.9:.1f}s" fill="freeze"/></rect>')
+
+
+# Ambient motion for the hero and section headers. These loop, so every image that
+# uses them ships a still twin that <picture> serves under prefers-reduced-motion.
+
+def packet(path, colour, dur, begin=0.0, size=6):
+    """A data packet that travels a circuit trace, fading in and out at the ends."""
+    h = size / 2
+    return (f'<rect x="{-h}" y="{-h}" width="{size}" height="{size}" fill="{colour}" opacity="0">'
+            f'<animateMotion path="{path}" dur="{dur}s" begin="{begin}s" repeatCount="indefinite" '
+            f'keyPoints="0;1" keyTimes="0;1" calcMode="linear"/>'
+            f'<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="{dur}s" '
+            f'begin="{begin}s" repeatCount="indefinite"/></rect>')
+
+
+def dot_grid(w, h, colour, seed, pitch=20, opacity=0.14, twinkle=0, x0=0, y0=0):
+    """A faint dot matrix; `twinkle` of its dots slowly brighten and fade, out of step."""
+    rng = random.Random(seed)
+    dots = [(x, y) for x in range(x0 + pitch // 2, x0 + w, pitch) for y in range(y0 + pitch // 2, y0 + h, pitch)]
+    d = "".join(f"M{x - 1} {y - 1}h2v2h-2Z" for x, y in dots)
+    out = [f'<path d="{d}" fill="{colour}" opacity="{opacity}"/>']
+    for x, y in rng.sample(dots, min(twinkle, len(dots))):
+        dur = rng.uniform(2.6, 5.2)
+        out.append(f'<rect x="{x - 1.5}" y="{y - 1.5}" width="3" height="3" fill="{colour}" opacity="0">'
+                   f'<animate attributeName="opacity" values="0;0.85;0" dur="{dur:.1f}s" '
+                   f'begin="{rng.uniform(0, 4):.1f}s" repeatCount="indefinite"/></rect>')
+    return "".join(out)
+
+
+def bob(dy=4, dur=4.0, begin=0.0):
+    """A slow float, eased at both ends, for toasts and the scientist."""
+    return (f'<animateTransform attributeName="transform" type="translate" values="0 0;0 {-dy};0 0" '
+            f'keyTimes="0;0.5;1" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" '
+            f'dur="{dur}s" begin="{begin}s" repeatCount="indefinite"/>')
+
+
+def pixels(rows, x, y, scale, palette):
+    """Draw a pixel map; palette maps characters to colours, other cells stay empty."""
+    out = []
+    for key, colour in palette.items():
+        d = "".join(f"M{x + c * scale:g} {y + r * scale:g}h{scale:g}v{scale:g}h-{scale:g}Z"
+                    for r, row in enumerate(rows) for c, v in enumerate(row) if v == key)
+        if d:
+            out.append(f'<path d="{d}" fill="{colour}"/>')
+    return f'<g shape-rendering="crispEdges">{"".join(out)}</g>'
+
+
+# ------------------------------------------------------------------ cards
+# The profile's own card language: a pale sheet with a hairline, an ink terminal
+# strip for commands, mono for code and heavy display type for headlines.
+
+SHEET = {
+    "dark": dict(sheet="#10103a", edge="#34348a", text=BRAND["paper"], muted="#b4b4f0", soft="#2a2a6e",
+                 well="#1f1f55", heat=["#1f1f55", "#3a3ab5", BRAND["neon"], "#a8a8f6", BRAND["paper"]],
+                 easy="#3fb950", medium="#ffb02e", hard="#ff4d5e", shadow=BRAND["deep"]),
+    "light": dict(sheet=BRAND["paper"], edge=BRAND["lavender"], text=BRAND["ink"], muted="#4f4fc4", soft="#e4e4f7",
+                  well="#e4e4f7", heat=["#e4e4f7", "#a8a8f6", BRAND["neon"], BRAND["ink"], BRAND["deep"]],
+                  easy="#1a7f37", medium="#b45309", hard="#cf222e", shadow=BRAND["lavender"]),
+}
+STRIP = 30
+
+
+def card(theme, w, h, radius=6):
+    """The sheet every card sits on."""
+    s = SHEET[theme]
+    return (f'<rect x="1" y="1" width="{w - 2}" height="{h - 2}" rx="{radius}" fill="{s["sheet"]}" '
+            f'stroke="{s["edge"]}" stroke-width="1.5"/>')
+
+
+def strip(ts, w, y, parts, start=None, rate=0.022, radius=6, top=False):
+    """An ink terminal strip. parts = [(text, colour), ...]; types itself out from `start`.
+
+    Returns (svg, time typing ends). top=True rounds the top corners instead of the bottom.
+    """
+    b = BRAND
+    if top:
+        shape = f'M1 {y + STRIP}V{y + radius + 1}Q1 {y + 1} {radius + 1} {y + 1}H{w - radius - 1}Q{w - 1} {y + 1} {w - 1} {y + radius + 1}V{y + STRIP}Z'
+    else:
+        shape = f'M1 {y}H{w - 1}V{y + STRIP - radius - 1}Q{w - 1} {y + STRIP - 1} {w - radius - 1} {y + STRIP - 1}H{radius + 1}Q1 {y + STRIP - 1} 1 {y + STRIP - radius - 1}Z'
+    out, x, t = [f'<path d="{shape}" fill="{b["ink"]}"/>'], 14, start
+    for text, colour in parts:
+        g, t2 = ts.text(text, "code", 12.5, x, y + 19.5, colour, reveal=(t, rate) if start is not None else None)
+        out.append(g)
+        x += text_width(text, "code", 12.5)
+        t = t2 if start is not None else t
+    if start is not None:
+        out.append(caret(x + 2, y + 9, 7, 13, b["lavender"], t))
+    return "".join(out), (t if start is not None else 0)
+
+
+def strip_tag(ts, w, text, live=False, y=0):
+    """Right-aligned status in a top strip; a live tag's dot pulses three times, then rests."""
+    b = BRAND
+    out = ts.text(text, "code", 12, w - 14, y + 19.5, b["lavender"], anchor="end")[0]
+    if live:
+        cx = w - 14 - text_width(text, "code", 12) - 8
+        out += (f'<circle cx="{cx:.1f}" cy="{y + 15.5}" r="3" fill="{b["paper"]}">'
+                f'<animate attributeName="opacity" values="1;0.25;1" dur="1.2s" begin="0.4s" repeatCount="3"/></circle>')
+    return out
+
+
+# Progress cards: three to a row on wide screens, stacked on phones
+STAT_W, STAT_H = 252, 212
+
+
+def readout(ts, theme, number, label, delay, x=14, y=82):
+    """A big number with its unit, fading in once the command has typed."""
+    s = SHEET[theme]
+    nw = text_width(str(number), "headline", 30)
+    return (f'<g opacity="1">{fade(delay)}{ts.text(str(number), "headline", 30, x, y, s["text"])[0]}'
+            f'{ts.text(label, "text", 14, x + nw + 10, y - 3, s["muted"])[0]}</g>')
+
+
+def footnote(ts, theme, text, delay, y=STAT_H - 16):
+    s = SHEET[theme]
+    while text_width(text, "code", 12) > STAT_W - 28 and len(text) > 4:
+        text = text[:-2].rstrip() + "…"
+    return f'<g opacity="1">{fade(delay)}{ts.text(text, "code", 12, 14, y, s["muted"])[0]}</g>'
 
 
 # ------------------------------------------------------------------ type as paths
@@ -130,7 +339,8 @@ def _glyph(ch, face, size):
     return "".join(out), adv
 
 
-def text_width(text, face, size, tracking=0.0):
+def text_width(text, face, size, tracking=None):
+    tracking = TRACK.get(face, 0) * size if tracking is None else tracking
     return sum(_glyph(c, face, size)[1] + tracking for c in text) - (tracking if text else 0)
 
 
@@ -182,8 +392,9 @@ class Typesetter:
             self.defs[key] = (f"{self.prefix}{len(self.defs)}", d)
         return self.defs[key][0]
 
-    def text(self, text, face, size, x, y, fill, anchor="start", tracking=0.0, jitter=0.0,
+    def text(self, text, face, size, x, y, fill, anchor="start", tracking=None, jitter=0.0,
              opacity=None, reveal=None, seed=0, attrs=""):
+        tracking = TRACK.get(face, 0) * size if tracking is None else tracking
         w = text_width(text, face, size, tracking)
         x -= {"start": 0, "middle": w / 2, "end": w}[anchor]
         rng = random.Random(f"{seed}{text}{face}")

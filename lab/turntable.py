@@ -22,6 +22,9 @@ CRATE = ROOT / "lab" / "render3d"
 BINARY = CRATE / "target" / "release" / "render3d"
 BASE_COLOURS = {"A": "#3fb950", "C": "#58a6ff", "G": "#ffb02e", "T": "#ff1f3d"}
 PAIR = {"A": "T", "T": "A", "C": "G", "G": "C"}
+# Scenes are shared by both renders; their lights use each theme's own accent.
+SCENE_ACCENT = THEMES["dark"]["glow"]
+SCENE_HIGHLIGHT = THEMES["dark"]["pen"]
 
 
 def _rgb(h):
@@ -211,11 +214,11 @@ def plasmid_scene(weeks, turns=5, R=9.0):
             p, nr, bi = plasmid_frame(u, n)
             size = 2.4 + 4.2 * math.sqrt(c / peak)
             core = mid + nr * (R + size * 0.9)
-            prims.append(sphere(core, size, "#ff1f3d", 0.9))
+            prims.append(sphere(core, size, SCENE_ACCENT, 0.9))
             for k in range(3):
                 ang = 2 * math.pi * k / 3 + u
                 prims.append(sphere(core + size * 0.75 * (math.cos(ang) * bi + math.sin(ang) * nr * 0.6 + 0.3 * nr),
-                                    size * 0.62, "#ff5c72", 0.6))
+                                    size * 0.62, SCENE_HIGHLIGHT, 0.6))
     return prims
 
 
@@ -261,12 +264,12 @@ def spindle_scene(langs, seed=7):
                 prims.append(capsule(pts[k], pts[k + 1], (rads[k] + rads[k + 1]) / 2, cols[k]))
             kin = c + np.array([0.0, side * 1.0, 0.0])
             prims.append(sphere(kin, 0.9, "#ffffff", 0.7))
-            prims.append(capsule(np.array([0.0, side * POLE, 0.0]), kin, 0.16, "#ffd6dc", 0.75))
+            prims.append(capsule(np.array([0.0, side * POLE, 0.0]), kin, 0.16, SCENE_HIGHLIGHT, 0.75))
     for side in (-1, 1):
         pole = np.array([0.0, side * POLE, 0.0])
-        prims.append(sphere(pole, 2.8, "#ff1f3d", 1.0))
+        prims.append(sphere(pole, 2.8, SCENE_ACCENT, 1.0))
         for k in range(10):
             a = 2 * math.pi * k / 10 + 0.3
             tip = pole + np.array([13 * math.cos(a), side * 10.0, 13 * math.sin(a)])
-            prims.append(capsule(pole, tip, 0.12, "#ff5c72", 0.7))
+            prims.append(capsule(pole, tip, 0.12, SCENE_HIGHLIGHT, 0.7))
     return prims
