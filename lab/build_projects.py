@@ -15,11 +15,19 @@ from notebook import (ASSETS, BRAND, SHEET, STRIP, Typesetter, card, fx, pixels,
 
 GITHUB = "https://github.com/Llenoxinn"
 PROJECTS = [
-    dict(name="Sylvi", repo=None, art="sylvi",
+    dict(name="dfCTF", repo="dfCTF", art="flag",
+         line="Solve flags. Climb the weekly board.", detail="Seven categories · first blood · timed events",
+         stack=[("ts", "TypeScript"), ("next", "Next.js"), ("react", "React"), ("postgres", "PostgreSQL"),
+                ("drizzle", "Drizzle"), ("docker", "Docker")]),
+    dict(name="BELaude", repo="BELaude", art="laude",
+         line="The GWA you need for Latin honors.", detail="Summa, Magna, Cum laude · semester by semester, UP",
+         stack=[("react", "React"), ("ts", "TypeScript"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"),
+                ("vitest", "Vitest"), ("python", "Python")]),
+    dict(name="Sylvi", repo="Sylvi", art="sylvi",
          line="ID photo sheets, printed true to size.", detail="1×1, 2×2, passport · PDF, PNG, JPG",
          stack=[("ts", "TypeScript"), ("js", "JavaScript"), ("react", "React"), ("vite", "Vite"),
                 ("plpgsql", "PL/pgSQL"), ("html", "HTML"), ("css", "CSS")]),
-    dict(name="Olatz-Tol", repo="Olatz-Tol-", art="collatz",
+    dict(name="Olatz-Tol", repo="Olatz-tol", art="collatz",
          line="Pick a number. Watch it fall to 1.", detail="The Collatz 3n + 1 rule, drawn",
          stack=[("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"), ("zustand", "Zustand"),
                 ("lucide", "Lucide")]),
@@ -27,7 +35,7 @@ PROJECTS = [
          line="Proteins in 3D, on raw Three.js.", detail="No NGL, Mol* or 3Dmol.js inside",
          stack=[("react", "React"), ("vite", "Vite"), ("three", "Three.js"), ("r3f", "React Three Fiber"),
                 ("drei", "Drei"), ("tailwind", "Tailwind CSS")]),
-    dict(name="viscal", repo="viscal", art="lissajous",
+    dict(name="viscal", repo="Viscal", art="lissajous",
          line="Generative art from pure math.", detail="Lissajous · L-systems · Gray–Scott",
          stack=[("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS")]),
     dict(name="Perk the Star", repo="GeoCeff/perk-the-star", art="orbit",
@@ -149,7 +157,45 @@ def art_orbit():
     return cells
 
 
-ARTS = dict(sylvi=art_sylvi, collatz=art_collatz, helix=art_helix, lissajous=art_lissajous, tree=art_tree,
+def art_flag():
+    """A capture flag on its pole, mid-wave."""
+    cells = {}
+    for y in range(2, 19):
+        cells[(4, y)] = "L"
+    for x in range(2, 8):
+        cells[(x, 18)] = "N"
+    for x in range(5, 18):
+        wave = round(1.2 * math.sin((x - 5) / 12 * 2 * math.pi))
+        for y in range(3 + wave, 11 + wave):
+            cells[(x, y)] = "P"
+    for x, y in ((8, 6), (9, 6), (8, 7), (9, 7), (12, 5), (13, 5), (12, 6), (13, 6)):
+        cells[(x, y + round(1.2 * math.sin((x - 5) / 12 * 2 * math.pi)))] = "N"
+    return cells
+
+
+def art_laude():
+    """A mortarboard with its tassel."""
+    cells = {}
+    for y in range(3, 11):
+        half = 8 - abs(y - 7) * 2
+        for x in range(10 - half, 10 + half):
+            cells[(x, y)] = "P"
+    for y in range(10, 15):
+        for x in range(5, 15):
+            cells[(x, y)] = "L"
+    for x in range(5, 15):
+        cells[(x, 15)] = "N"
+    cells[(9, 6)] = cells[(10, 6)] = "N"
+    for x, y in ((11, 7), (12, 8), (13, 9), (14, 10), (15, 11)):
+        cells[(x, y)] = "N"
+    for y in range(12, 17):
+        cells[(16, y)] = "N"
+    for x in (15, 16, 17):
+        cells[(x, 17)] = "P"
+    return cells
+
+
+ARTS = dict(flag=art_flag, laude=art_laude, sylvi=art_sylvi, collatz=art_collatz, helix=art_helix, lissajous=art_lissajous, tree=art_tree,
             orbit=art_orbit)
 
 

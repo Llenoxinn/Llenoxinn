@@ -14,18 +14,21 @@ from notebook import ASSETS, BRAND, SHEET, Typesetter, fade, mark, replace_block
 OUT = ASSETS / "stack"
 TILE = 48
 SHELF = [
-    ("lang", ["C", "C++", "Haskell", "Python", "JavaScript", "TypeScript", "HTML", "CSS"]),
-    ("web", ["React", "Next.js", "Svelte", "Vite", "Tailwind CSS", "Zustand", "D3.js"]),
-    ("backend", ["Node.js", "Supabase"]),
+    ("lang", ["C", "C++", "C#", "Haskell", "Kotlin", "Prolog", "Python", "JavaScript", "TypeScript", "HTML", "CSS",
+              "LaTeX"]),
+    ("web", ["React", "Next.js", "Svelte", "Vite", "Tailwind CSS", "Zustand", "D3.js", "Three.js", "Electron"]),
+    ("backend", ["Node.js", "Supabase", "PostgreSQL", "Drizzle"]),
+    ("ship", ["Docker", "Vercel", "GitHub Actions", "Vitest", "Playwright"]),
     ("tools", ["Godot", "WSL", "UCSF ChimeraX", "Audacity"]),
     ("design", ["Figma", "Adobe Photoshop", "Adobe InDesign", "Adobe Illustrator", "Canva"]),
 ]
-GROUP = {"lang": "Languages", "web": "Web", "backend": "Back end", "tools": "Tools", "design": "Design"}
-NEW_LINE = {"web", "backend", "design"}    # tools shares a line with backend on wide screens
+GROUP = {"lang": "Languages", "web": "Web", "backend": "Back end", "ship": "Test and ship", "tools": "Tools",
+         "design": "Design"}
+NEW_LINE = {"web", "backend", "tools"}    # ship shares a line with backend, design with tools, on wide screens
 
 
 def slug(name):
-    return re.sub(r"[^a-z0-9]+", "-", name.lower().replace("+", "p")).strip("-")
+    return re.sub(r"[^a-z0-9]+", "-", name.lower().replace("+", "p").replace("#", "sharp")).strip("-")
 
 
 def tile(name, theme, n):
