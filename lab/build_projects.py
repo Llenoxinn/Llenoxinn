@@ -220,23 +220,36 @@ def icon(project, x, y, delay):
             rows.append(f'<g opacity="1">{fx(None if delay is None else delay + r * 0.025, 0.12)}{"".join(paths)}</g>')
     scan = ""
     if delay is not None:
-        scan = (f'<clipPath id="iconclip"><rect x="{x}" y="{y}" width="{size}" height="{size}" rx="5"/></clipPath>'
+        scan = (f'<clipPath id="iconclip"><rect x="{x}" y="{y}" width="{size}" height="{size}" rx="8"/></clipPath>'
                 f'<rect clip-path="url(#iconclip)" x="{x}" y="{y - 6}" width="{size}" height="6" fill="{BRAND["lavender"]}" opacity="0.35">'
                 f'<animate attributeName="y" values="{y - 6};{y - 6};{y + size}" keyTimes="0;0.7;1" dur="5s" '
                 f'begin="1.5s" repeatCount="indefinite"/></rect>')
-    return (f'<rect x="{x}" y="{y}" width="{size}" height="{size}" rx="5" fill="{BRAND["ink"]}"/>'
+    return (f'<rect x="{x}" y="{y}" width="{size}" height="{size}" rx="8" fill="{BRAND["ink"]}"/>'
             f'<g shape-rendering="crispEdges">{"".join(rows)}</g>{scan}')
 
 
-def private_pill(ts, theme, right, y):
-    """A soft pill with a pixel lock, the same family as the CTF result tags."""
+def public_pill(ts, theme, right, y):
+    """A sleek Notion status pill with a green dot and button-in-button trailing arrow."""
     s = SHEET[theme]
-    tw = text_width("private", "code", 12)
+    w = 68
+    x = right - w
+    body = (f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="20" rx="10" fill="{s["soft"]}" stroke="{s["inner_edge"]}" stroke-width="1"/>'
+            f'<circle cx="{x + 8:.1f}" cy="{y + 10}" r="3" fill="#3fb950"/>'
+            + ts.text("repo", "code", 11, x + 16, y + 14, s["text"])[0]
+            + f'<circle cx="{x + w - 10:.1f}" cy="{y + 10}" r="6.5" fill="{s["sheet"]}"/>'
+            + ts.text("↗", "code", 9.5, x + w - 10, y + 13.5, s["text"], anchor="middle")[0])
+    return body, x
+
+
+def private_pill(ts, theme, right, y):
+    """A soft pill with a pixel lock, matching the Notion status aesthetic."""
+    s = SHEET[theme]
+    tw = text_width("private", "code", 11)
     w = 8 + 9 + 6 + tw + 9
     x = right - w
-    return (f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="20" rx="4" fill="{s["soft"]}"/>'
+    return (f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="20" rx="10" fill="{s["soft"]}" stroke="{s["inner_edge"]}" stroke-width="1"/>'
             + pixels(LOCK, x + 8, y + 5, 1.5, {"X": s["text"]})
-            + ts.text("private", "code", 12, x + 8 + 9 + 6, y + 14.5, s["text"])[0]), x
+            + ts.text("private", "code", 11, x + 8 + 9 + 6, y + 14, s["text"])[0]), x
 
 
 def repo_url(repo):
@@ -246,21 +259,24 @@ def repo_url(repo):
 def project_card(p, theme, animate=True):
     s = SHEET[theme]
     ts = Typesetter("p")
-    body = [card(theme, CARD_W, CARD_H), icon(p, 16, 10, 0.05 if animate else None)]
+    body = [card(theme, CARD_W, CARD_H, radius=10), icon(p, 14, 10, 0.05 if animate else None)]
     status = "public" if p["repo"] else "private"
-    room = CARD_W - 88 - 16
-    if not p["repo"]:     # labelled, so the missing link reads as deliberate
+    if p["repo"]:
+        pill, px = public_pill(ts, theme, CARD_W - 12, 12)
+        body.append(pill)
+        room = px - 8 - 82
+    else:
         pill, px = private_pill(ts, theme, CARD_W - 12, 12)
         body.append(pill)
-        room = px - 8 - 88
-    size = 18
+        room = px - 8 - 82
+    size = 17.5
     while text_width(p["name"], "label", size) > room:
         size -= 1
-    body.append(f'<g opacity="1">{fx(0.2 if animate else None)}{ts.text(p["name"], "label", size, 88, 38, s["text"])[0]}</g>')
-    body.append(f'<g opacity="1">{fx(0.3 if animate else None)}{ts.text(p["line"], "text", 14, 88, 60, s["muted"])[0]}</g>')
+    body.append(f'<g opacity="1">{fx(0.06 if animate else None)}{ts.text(p["name"], "label", size, 80, 36, s["text"])[0]}</g>')
+    body.append(f'<g opacity="1">{fx(0.10 if animate else None)}{ts.text(p["line"], "text", 13.5, 80, 57, s["muted"])[0]}</g>')
     names = "  ".join(short for short, _ in p["stack"])
     svg, _ = strip(ts, CARD_W, CARD_H - STRIP, [("$ ", BRAND["neon"]), (names, BRAND["paper"])],
-                   start=0.6 if animate else None, rate=0.045)
+                   start=0.20 if animate else None, rate=0.035, radius=10)
     body.append(svg)
     owner = f", with {p['repo'].split('/')[0]}" if p["repo"] and "/" in p["repo"] else ""
     alt = (f"{p['name']}, {status} repository{owner}: {p['line']} {p['detail']}. "

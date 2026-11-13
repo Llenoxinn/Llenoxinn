@@ -5,8 +5,10 @@ lab/fonts, so GitHub shows the same type to everyone, whatever fonts they have.
 """
 import datetime as dt
 import math
+import os
 import random
 import re
+import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -17,6 +19,12 @@ ASSETS = ROOT / "assets"
 LAB = "https://github.com/Llenoxinn/Llenoxinn/blob/HEAD"  # absolute: relative links break on the profile page
 USER = "Llenoxinn"
 MANILA = dt.timezone(dt.timedelta(hours=8), "Asia/Manila")
+
+# Ensure matplotlib uses the local persistent config and font cache
+_lab_dir = Path(__file__).resolve().parent
+_mpl_dir = _lab_dir / ".runtime" / ".mplconfig"
+_mpl_dir.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(_mpl_dir))
 
 # Notion /dev's pairing: Inter for headlines and text, iA Writer Mono for commands and code.
 # Pixelify stays for the pixel accents.
@@ -237,21 +245,24 @@ def pixels(rows, x, y, scale, palette):
 # strip for commands, mono for code and heavy display type for headlines.
 
 SHEET = {
-    "dark": dict(sheet="#10103a", edge="#34348a", text=BRAND["paper"], muted="#b4b4f0", soft="#2a2a6e",
-                 well="#1f1f55", heat=["#1f1f55", "#3a3ab5", BRAND["neon"], "#a8a8f6", BRAND["paper"]],
+    "dark": dict(sheet="#0f1133", edge="#34348a", inner_edge="#22245b", text=BRAND["paper"], muted="#b4b4f0", soft="#232358",
+                 well="#1b1c4c", heat=["#1b1c4c", "#3a3ab5", BRAND["neon"], "#a8a8f6", BRAND["paper"]],
                  easy="#3fb950", medium="#ffb02e", hard="#ff4d5e", shadow=BRAND["deep"]),
-    "light": dict(sheet=BRAND["paper"], edge=BRAND["lavender"], text=BRAND["ink"], muted="#4f4fc4", soft="#e4e4f7",
-                  well="#e4e4f7", heat=["#e4e4f7", "#a8a8f6", BRAND["neon"], BRAND["ink"], BRAND["deep"]],
+    "light": dict(sheet="#ffffff", edge="#d4d4ea", inner_edge="#f0f0fb", text=BRAND["ink"], muted="#4f4fc4", soft="#ececf8",
+                  well="#e9e9f8", heat=["#ececf8", "#a8a8f6", BRAND["neon"], BRAND["ink"], BRAND["deep"]],
                   easy="#1a7f37", medium="#b45309", hard="#cf222e", shadow=BRAND["lavender"]),
 }
 STRIP = 30
 
 
-def card(theme, w, h, radius=6):
-    """The sheet every card sits on."""
+def card(theme, w, h, radius=8):
+    """The sheet every card sits on, built with double-bezel concentric curves."""
     s = SHEET[theme]
-    return (f'<rect x="1" y="1" width="{w - 2}" height="{h - 2}" rx="{radius}" fill="{s["sheet"]}" '
-            f'stroke="{s["edge"]}" stroke-width="1.5"/>')
+    inner_r = max(radius - 2, 2)
+    return (f'<rect x="0.75" y="0.75" width="{w - 1.5}" height="{h - 1.5}" rx="{radius}" fill="{s["sheet"]}" '
+            f'stroke="{s["edge"]}" stroke-width="1.5"/>'
+            f'<rect x="2.5" y="2.5" width="{w - 5}" height="{h - 5}" rx="{inner_r}" fill="none" '
+            f'stroke="{s["inner_edge"]}" stroke-width="1" opacity="0.6"/>')
 
 
 HOLD = 4.0     # seconds a typed line rests before it clears and types again
@@ -295,7 +306,7 @@ def typed(ts, parts, x, y, size, start, rate=0.05, hold=HOLD, caret_colour=None,
     return "".join(out), start + n * rate
 
 
-def strip(ts, w, y, parts, start=None, rate=0.05, radius=6, top=False):
+def strip(ts, w, y, parts, start=None, rate=0.05, radius=8, top=False):
     """An ink terminal strip. parts = [(text, colour), ...]; a leading "$ " prompt stays
     put and the rest types on a loop from `start` (None: finished, for stills).
 

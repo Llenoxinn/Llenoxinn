@@ -33,9 +33,12 @@ def slug(name):
 
 def tile(name, theme, n):
     s = SHEET[theme]
-    body = (f'<g opacity="1">{fade(0.05 + n * 0.03, 0.25)}'
-            f'<rect x="0.75" y="0.75" width="{TILE - 1.5}" height="{TILE - 1.5}" rx="6" fill="{s["sheet"]}" '
-            f'stroke="{s["edge"]}" stroke-width="1.5"/>'
+    delay = min(n * 0.008, 0.25)
+    body = (f'<g opacity="1">{fade(delay, 0.2)}'
+            f'<rect x="0.75" y="0.75" width="{TILE - 1.5}" height="{TILE - 1.5}" rx="8" fill="{s["sheet"]}" '
+            f'stroke="{s["edge"]}" stroke-width="1.2"/>'
+            f'<rect x="2.5" y="2.5" width="{TILE - 5}" height="{TILE - 5}" rx="6" fill="none" '
+            f'stroke="{s["inner_edge"]}" stroke-width="1" opacity="0.6"/>'
             + mark(name, 12, 12, 24, s["text"]) + "</g>")
     return svg_doc(TILE, TILE, body, name)
 
@@ -43,11 +46,14 @@ def tile(name, theme, n):
 def group_tile(group, theme, n):
     """A mono folder label that opens each group: lang/, web/ …"""
     ts = Typesetter("g")
+    s = SHEET[theme]
     label = f"{group}/"
-    w = round(text_width(label, "code-bold", 13)) + 28
-    body = (f'<g opacity="1">{fade(0.05 + n * 0.03, 0.25)}'
-            f'<rect width="{w}" height="{TILE}" rx="6" fill="{BRAND["ink"]}"/>'
-            + ts.text(label, "code-bold", 13, 14, 29, BRAND["paper"])[0] + "</g>")
+    w = round(text_width(label, "code-bold", 12.5)) + 28
+    delay = min(n * 0.008, 0.25)
+    body = (f'<g opacity="1">{fade(delay, 0.2)}'
+            f'<rect x="0.75" y="0.75" width="{w - 1.5}" height="{TILE - 1.5}" rx="8" fill="{BRAND["ink"]}" stroke="{s["edge"]}" stroke-width="1"/>'
+            f'<rect x="2.5" y="2.5" width="{w - 5}" height="{TILE - 5}" rx="6" fill="none" stroke="{BRAND["lavender"]}" stroke-width="1" opacity="0.3"/>'
+            + ts.text(label, "code-bold", 12.5, 14, 29, BRAND["paper"])[0] + "</g>")
     return svg_doc(w, TILE, ts.defs_svg() + body, GROUP[group]), w
 
 

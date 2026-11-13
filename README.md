@@ -21,7 +21,7 @@
 
 <!-- STACK:START -->
 <p align="center">
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-lang-dark.svg"><img src="assets/stack/group-lang-light.svg" alt="Languages:" title="Languages" width="69" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-lang-dark.svg"><img src="assets/stack/group-lang-light.svg" alt="Languages:" title="Languages" width="68" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/c-dark.svg"><img src="assets/stack/c-light.svg" alt="C" title="C" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/cpp-dark.svg"><img src="assets/stack/cpp-light.svg" alt="C++" title="C++" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/csharp-dark.svg"><img src="assets/stack/csharp-light.svg" alt="C#" title="C#" width="48" height="48"></picture>
@@ -35,7 +35,7 @@
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/css-dark.svg"><img src="assets/stack/css-light.svg" alt="CSS" title="CSS" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/latex-dark.svg"><img src="assets/stack/latex-light.svg" alt="LaTeX" title="LaTeX" width="48" height="48"></picture>
 <br>
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-web-dark.svg"><img src="assets/stack/group-web-light.svg" alt="Web:" title="Web" width="61" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-web-dark.svg"><img src="assets/stack/group-web-light.svg" alt="Web:" title="Web" width="60" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/react-dark.svg"><img src="assets/stack/react-light.svg" alt="React" title="React" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/next-js-dark.svg"><img src="assets/stack/next-js-light.svg" alt="Next.js" title="Next.js" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/svelte-dark.svg"><img src="assets/stack/svelte-light.svg" alt="Svelte" title="Svelte" width="48" height="48"></picture>
@@ -46,24 +46,24 @@
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/three-js-dark.svg"><img src="assets/stack/three-js-light.svg" alt="Three.js" title="Three.js" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/electron-dark.svg"><img src="assets/stack/electron-light.svg" alt="Electron" title="Electron" width="48" height="48"></picture>
 <br>
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-backend-dark.svg"><img src="assets/stack/group-backend-light.svg" alt="Back end:" title="Back end" width="93" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-backend-dark.svg"><img src="assets/stack/group-backend-light.svg" alt="Back end:" title="Back end" width="91" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/node-js-dark.svg"><img src="assets/stack/node-js-light.svg" alt="Node.js" title="Node.js" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/supabase-dark.svg"><img src="assets/stack/supabase-light.svg" alt="Supabase" title="Supabase" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/postgresql-dark.svg"><img src="assets/stack/postgresql-light.svg" alt="PostgreSQL" title="PostgreSQL" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/drizzle-dark.svg"><img src="assets/stack/drizzle-light.svg" alt="Drizzle" title="Drizzle" width="48" height="48"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-ship-dark.svg"><img src="assets/stack/group-ship-light.svg" alt="Test and ship:" title="Test and ship" width="68" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-ship-dark.svg"><img src="assets/stack/group-ship-light.svg" alt="Test and ship:" title="Test and ship" width="67" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/docker-dark.svg"><img src="assets/stack/docker-light.svg" alt="Docker" title="Docker" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/vercel-dark.svg"><img src="assets/stack/vercel-light.svg" alt="Vercel" title="Vercel" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/github-actions-dark.svg"><img src="assets/stack/github-actions-light.svg" alt="GitHub Actions" title="GitHub Actions" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/vitest-dark.svg"><img src="assets/stack/vitest-light.svg" alt="Vitest" title="Vitest" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/playwright-dark.svg"><img src="assets/stack/playwright-light.svg" alt="Playwright" title="Playwright" width="48" height="48"></picture>
 <br>
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-tools-dark.svg"><img src="assets/stack/group-tools-light.svg" alt="Tools:" title="Tools" width="77" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-tools-dark.svg"><img src="assets/stack/group-tools-light.svg" alt="Tools:" title="Tools" width="74" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/godot-dark.svg"><img src="assets/stack/godot-light.svg" alt="Godot" title="Godot" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/wsl-dark.svg"><img src="assets/stack/wsl-light.svg" alt="WSL" title="WSL" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/ucsf-chimerax-dark.svg"><img src="assets/stack/ucsf-chimerax-light.svg" alt="UCSF ChimeraX" title="UCSF ChimeraX" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/audacity-dark.svg"><img src="assets/stack/audacity-light.svg" alt="Audacity" title="Audacity" width="48" height="48"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-design-dark.svg"><img src="assets/stack/group-design-light.svg" alt="Design:" title="Design" width="86" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-design-dark.svg"><img src="assets/stack/group-design-light.svg" alt="Design:" title="Design" width="82" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/figma-dark.svg"><img src="assets/stack/figma-light.svg" alt="Figma" title="Figma" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/adobe-photoshop-dark.svg"><img src="assets/stack/adobe-photoshop-light.svg" alt="Adobe Photoshop" title="Adobe Photoshop" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/adobe-indesign-dark.svg"><img src="assets/stack/adobe-indesign-light.svg" alt="Adobe InDesign" title="Adobe InDesign" width="48" height="48"></picture>
@@ -97,7 +97,7 @@
 <a href="https://leetcode.com/u/Acetylsphae/"><picture><source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/leetcode-still-dark.svg?v=1cf6c8a4"><source media="(prefers-reduced-motion: reduce)" srcset="assets/leetcode-still-light.svg?v=1cf6c8a4"><source media="(prefers-color-scheme: dark)" srcset="assets/leetcode-dark.svg?v=1cf6c8a4"><img src="assets/leetcode-light.svg?v=1cf6c8a4" alt="LeetCode @Acetylsphae: 31 problems solved (30 easy, 1 medium, 0 hard) over 11 active days; latest Implement Queue using Stacks, 11 Nov." width="252" height="212"></picture></a>
 <!-- LEETCODE:END -->
 <!-- ASSAY:START -->
-<a href="https://play.picoctf.org/practice"><picture><source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/assay-still-dark.svg?v=f92ad70f"><source media="(prefers-reduced-motion: reduce)" srcset="assets/assay-still-light.svg?v=f92ad70f"><source media="(prefers-color-scheme: dark)" srcset="assets/assay-dark.svg?v=f92ad70f"><img src="assets/assay-light.svg?v=f92ad70f" alt="picoGym progress for @sphaericus: 78 flags captured (59 easy · 19 medium). General Skills 52, Reverse Engineering 13, Cryptography 10, Web Exploitation 2, Artificial Intelligence 1." width="252" height="212"></picture></a>
+<a href="https://play.picoctf.org/practice"><picture><source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/assay-still-dark.svg?v=36b138af"><source media="(prefers-reduced-motion: reduce)" srcset="assets/assay-still-light.svg?v=36b138af"><source media="(prefers-color-scheme: dark)" srcset="assets/assay-dark.svg?v=36b138af"><img src="assets/assay-light.svg?v=36b138af" alt="picoGym progress for @sphaericus: 78 flags captured (59 easy · 19 medium). General Skills 52, Reverse Engineering 13, Cryptography 10, Web Exploitation 2, Artificial Intelligence 1." width="252" height="212"></picture></a>
 <!-- ASSAY:END -->
 </p>
 

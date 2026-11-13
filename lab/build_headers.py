@@ -11,14 +11,14 @@ ships a still for prefers-reduced-motion.
 from notebook import (ASSETS, BRAND, SHEET, THEMES, Typesetter, card, dot_grid, fade, packet, pixels, svg_doc,
                       text_width)
 
-W, H = 600, 96
+W, H = 840, 92
 SECTIONS = [
-    ("stack", "[S] /stack", "Tools of the trade."),
-    ("projects", "[P] /projects", "Built, broken, shipped."),
-    ("live", "[L] /live", "Live from the lab."),
-    ("contact", "[C] /contact", "Ping me."),
+    ("stack", "[S] /dev/stack", "Tools of the trade.", "Languages, runtimes, frameworks & instruments"),
+    ("projects", "[P] /dev/projects", "Built, broken, shipped.", "Selected software, algorithms, and experiments"),
+    ("live", "[L] /dev/live", "Live from the lab.", "Hourly telemetry: GitHub, LeetCode, and CTF progress"),
+    ("contact", "[C] /dev/contact", "Ping me.", "Direct channels, networks, and collaborations"),
 ]
-TRACE = "M556 70V84H372"
+TRACE = "M776 38H580V64H420"
 
 
 def icon_rows(kind):
@@ -65,31 +65,41 @@ def icon_rows(kind):
     return ["".join(r) for r in grid]
 
 
-def header(key, path, title, theme, animate=True):
+def header(key, path, title, desc, theme, animate=True):
     s, b = SHEET[theme], BRAND
     ts = Typesetter("h")
-    out = [dot_grid(W, H, s["muted"], f"h{key}", opacity=0.22, twinkle=14 if animate else 0, focus=(556, 44, 300))]
+    is_dark = (theme == "dark")
+    out = [dot_grid(W, H, s["muted"], f"h{key}", opacity=0.18, twinkle=12 if animate else 0, focus=(776, 38, 260))]
     out.append(f'<path d="{TRACE}" fill="none" stroke="{b["neon"]}" stroke-width="1.5" stroke-dasharray="3 4"/>'
-               f'<path d="M368 80h8v8h-8Z" fill="{s["muted"]}"/>')
+               f'<circle cx="418" cy="64" r="3" fill="{b["neon"]}"/>')
     if animate:
         out.append(packet(TRACE, s["text"], 3.2) + packet(TRACE, b["neon"], 3.2, begin=1.6))
-    out.append(f'<rect x="526" y="10" width="60" height="60" rx="8" fill="{b["ink"]}"/>'
-               + pixels(icon_rows(key), 532, 16, 3, {"P": b["paper"], "L": b["lavender"], "N": b["neon"]}))
-    path_svg = ts.text(path, "code", 13, 2, 22, s["muted"])[0]
-    size = 36
-    while text_width(title, "headline", size) > 500:
-        size -= 2
-    title_svg = ts.text(title, "headline", size, 0, 68, s["text"])[0]
-    if animate:
-        path_svg, title_svg = (f'<g opacity="1">{fade(d, 0.35)}{g}</g>' for d, g in ((0.0, path_svg), (0.08, title_svg)))
-    out += [path_svg, title_svg]
+
+    # Icon container
+    out.append(f'<rect x="774" y="14" width="48" height="48" rx="8" fill="{b["ink"]}" stroke="{s["edge"]}" stroke-width="1"/>'
+               + pixels(icon_rows(key), 782, 22, 2.5, {"P": b["paper"], "L": b["lavender"], "N": b["neon"]}))
+
+    # Left typography hierarchy (always immediately legible, no opacity lag)
+    path_svg = ts.text(path, "code-bold", 12.5, 2, 20, s["muted"])[0]
+    size = 29
+    while text_width(title, "headline", size) > 520:
+        size -= 1
+    title_svg = ts.text(title, "headline", size, 0, 54, s["text"])[0]
+    desc_svg = ts.text(desc, "text", 13, 0, 76, s["muted"])[0]
+
+    out += [path_svg, title_svg, desc_svg]
+
+    # Subtle bottom hairline divider
+    divider = f'<line x1="0" y1="90" x2="840" y2="90" stroke="{s["edge"]}" stroke-width="1" opacity="0.6"/>'
+    out.append(divider)
+
     return svg_doc(W, H, ts.defs_svg() + "".join(out), title)
 
 
 # CTF results, drawn as cards so they sit with the live stats
 TROPHY = ["XXXXXXXXXX", "XXXXXXXXXX", "X.XXXXXX.X", "X.XXXXXX.X", ".XXXXXXXX.",
           "..XXXXXX..", "....XX....", "....XX....", "...XXXX...", "..XXXXXX.."]
-WINS = [("champion", "Champion", "Mission: CTF · UP CS Guild · Sep 2026", "1st"),
+WINS = [("champion", "Champion", "Mission: CTF · UP CS Guild · Sep 2026", "1st place"),
         ("hackforgov", "Top 2 student performer", "HackforGov5 Region 7 · DICT · Oct 2026", "wildcard")]
 WIN_W, WIN_H = 376, 72
 
@@ -97,15 +107,16 @@ WIN_W, WIN_H = 376, 72
 def win(slug, title, line, tag, theme):
     s, b = SHEET[theme], BRAND
     ts = Typesetter("w")
-    body = (card(theme, WIN_W, WIN_H)
+    tag_upper = tag.upper()
+    tw = text_width(tag_upper, "code-bold", 11) + 18
+    body = (card(theme, WIN_W, WIN_H, radius=8)
             + f'<g opacity="1">{fade(0.1, 0.35)}'
-            + f'<rect x="14" y="12" width="48" height="48" rx="6" fill="{b["ink"]}"/>'
-            + pixels(TROPHY, 23, 21, 3, {"X": b["paper"]})
-            + ts.text(title, "label", 15, 76, 33, s["text"])[0]
-            + ts.text(line, "text", 13, 76, 53, s["muted"])[0])
-    tw = text_width(tag, "code", 12) + 16
-    body += (f'<rect x="{WIN_W - 14 - tw:.1f}" y="14" width="{tw:.1f}" height="20" rx="4" fill="{s["soft"]}"/>'
-             + ts.text(tag, "code", 12, WIN_W - 22, 28, s["text"], anchor="end")[0] + "</g>")
+            + f'<rect x="12" y="12" width="48" height="48" rx="8" fill="{b["ink"]}"/>'
+            + pixels(TROPHY, 21, 21, 3, {"X": b["paper"]})
+            + ts.text(title, "label", 15.5, 72, 33, s["text"])[0]
+            + ts.text(line, "text", 12.5, 72, 53, s["muted"])[0])
+    body += (f'<rect x="{WIN_W - 14 - tw:.1f}" y="14" width="{tw:.1f}" height="20" rx="4" fill="{s["soft"]}" stroke="{s["inner_edge"]}" stroke-width="1"/>'
+             + ts.text(tag_upper, "code-bold", 11, WIN_W - 14 - tw / 2, 28, s["text"], anchor="middle")[0] + "</g>")
     return svg_doc(WIN_W, WIN_H, ts.defs_svg() + body, f"{title}: {line}")
 
 
@@ -113,9 +124,9 @@ if __name__ == "__main__":
     out = ASSETS / "headers"
     out.mkdir(parents=True, exist_ok=True)
     for theme in THEMES:
-        for key, path, title in SECTIONS:
-            (out / f"{key}-{theme}.svg").write_text(header(key, path, title, theme), encoding="utf-8")
-            (out / f"{key}-still-{theme}.svg").write_text(header(key, path, title, theme, False), encoding="utf-8")
+        for key, path, title, desc in SECTIONS:
+            (out / f"{key}-{theme}.svg").write_text(header(key, path, title, desc, theme), encoding="utf-8")
+            (out / f"{key}-still-{theme}.svg").write_text(header(key, path, title, desc, theme, False), encoding="utf-8")
         for slug, title, line, tag in WINS:
             (out / f"win-{slug}-{theme}.svg").write_text(win(slug, title, line, tag, theme), encoding="utf-8")
     print(f"wrote {len(SECTIONS)} section headers and {len(WINS)} CTF cards per theme")
