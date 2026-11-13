@@ -65,6 +65,26 @@ def icon_rows(kind):
     return ["".join(r) for r in grid]
 
 
+def icon_svg(key, box_x=774, box_y=14, box_size=48, scale=2.1):
+    """Render a pixel icon mathematically and optically centered in its box."""
+    rows = icon_rows(key)
+    min_x = min(x for r in rows for x, c in enumerate(r) if c != '.')
+    max_x = max(x for r in rows for x, c in enumerate(r) if c != '.')
+    min_y = min(y for y, r in enumerate(rows) for c in r if c != '.')
+    max_y = max(y for y, r in enumerate(rows) for c in r if c != '.')
+
+    box_cx = box_x + box_size / 2
+    box_cy = box_y + box_size / 2
+
+    center_c = (min_x + max_x + 1) / 2
+    center_r = (min_y + max_y + 1) / 2
+
+    x = box_cx - center_c * scale
+    y = box_cy - center_r * scale
+
+    return pixels(rows, x, y, scale, {"P": BRAND["paper"], "L": BRAND["lavender"], "N": BRAND["neon"]})
+
+
 def header(key, path, title, desc, theme, animate=True):
     s, b = SHEET[theme], BRAND
     ts = Typesetter("h")
@@ -75,9 +95,12 @@ def header(key, path, title, desc, theme, animate=True):
     if animate:
         out.append(packet(TRACE, s["text"], 3.2) + packet(TRACE, b["neon"], 3.2, begin=1.6))
 
-    # Icon container
-    out.append(f'<rect x="774" y="14" width="48" height="48" rx="8" fill="{b["ink"]}" stroke="{s["edge"]}" stroke-width="1"/>'
-               + pixels(icon_rows(key), 782, 22, 2.5, {"P": b["paper"], "L": b["lavender"], "N": b["neon"]}))
+    # Icon container: double-bezel concentric frame with mathematically centered pixel artwork
+    inner_border = s["inner_edge"] if is_dark else BRAND["lavender"]
+    icon_box = (f'<rect x="774" y="14" width="48" height="48" rx="8" fill="{b["ink"]}" stroke="{s["edge"]}" stroke-width="1.2"/>'
+                f'<rect x="775.5" y="15.5" width="45" height="45" rx="6.5" fill="none" stroke="{inner_border}" stroke-width="1" opacity="0.35"/>'
+                + icon_svg(key, 774, 14, 48, scale=2.1))
+    out.append(icon_box)
 
     # Left typography hierarchy (always immediately legible, no opacity lag)
     path_svg = ts.text(path, "code-bold", 12.5, 2, 20, s["muted"])[0]
