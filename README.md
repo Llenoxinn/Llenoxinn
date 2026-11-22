@@ -13,7 +13,7 @@
   <source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/banner-still-dark.svg">
   <source media="(prefers-reduced-motion: reduce)" srcset="assets/banner-still-light.svg">
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
-  <img src="assets/banner-light.svg" alt="dexterslab: Let the code begin. Dexter Juevesano, CS at UP Cebu, DOST scholar. Open the portfolio." width="100%">
+  <img src="assets/banner-light.svg" alt="dexterslab: Let the code begin. I&#39;m Dexter, a computer science student at UP Cebu. Open the portfolio." width="100%">
 </picture>
 </a>
 
