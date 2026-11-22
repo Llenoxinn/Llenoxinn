@@ -8,8 +8,8 @@ It comes wide and narrow (phones), each animated and still; <picture> picks one.
 """
 import random
 
-from notebook import (ASSETS, BRAND, PAPER, SHADE, THEMES, Typesetter, blink, box, flip, mark, materialize,
-                      print_clip, sheet, sprite_at, step_in, svg_doc, text_width, torn_path)
+from notebook import (ASSETS, BRAND, PAPER, SHADE, THEMES, Typesetter, blink, box, flip, mark, nudge_in,
+                      printed, scan_reveal_x, sheet, sprite_at, svg_doc, text_width, torn_path)
 from pixel import CHEVRON, FLASK, TESLA_A, TESLA_B, TUBES, WAVE_A, WAVE_B
 
 WORDMARK = "dexterslab"
@@ -212,23 +212,25 @@ def banner(theme, animate=True, layout="wide"):
     x, anchor = L["text_x"], ("middle" if L["centre"] else "start")
     word = (ts.text(WORDMARK, "pixel", L["word"], x + 4, L["word_y"] + 4, b["neon"], anchor=anchor)[0]
             + ts.text(WORDMARK, "pixel", L["word"], x, L["word_y"], b["paper"], anchor=anchor)[0])
-    if animate:      # the wordmark resolves out of the same pixel dither as the sheets below
-        defs, mask = materialize(f"word{layout[0]}", W, L["word_y"] + 12, 0.25, 0.7, cell=6)
-        out.append(f'<defs>{defs}</defs><g{mask}>{word}</g>')
+    if animate:      # horizontal phosphor scanline sweeps across the wordmark left-to-right
+        ww = text_width(WORDMARK, "pixel", L["word"]) + 10
+        wx = x - ww / 2 if L["centre"] else x - 2
+        wh = L["word"] * 1.05
+        out.append(scan_reveal_x(f"word{layout[0]}", wx, L["word_y"] - wh + 14, ww, wh, word, 0.12, 0.44))
     else:
         out.append(word)
-    out.append(f'<g>{step_in(at(0.5))}'
+    out.append(f'<g>{nudge_in(at(0.42), 4)}'
                + ts.text(TAGLINE, "title", L["tag"], x, L["tag_y"], b["lavender"], anchor=anchor)[0] + "</g>")
-    out.append(f'<g>{step_in(at(0.65))}'
+    out.append(f'<g>{nudge_in(at(0.54), 3)}'
                + ts.text(WHO, "body", L["who"], x, L["who_y"], b["paper"], anchor=anchor)[0] + "</g>")
     bw = text_width(BUTTON, "body-bold", 14) + 52
     bx = x - bw / 2 if L["centre"] else x
     by = L["btn_y"]
     chev = sprite_at(CHEVRON, bx + bw - 26, by + 11, 2, {"P": b["ink"]})
     if animate:
-        chev = (f'<g><animateTransform attributeName="transform" type="translate" values="0 0;4 0" keyTimes="0;0.5" '
-                f'calcMode="discrete" dur="0.9s" repeatCount="indefinite"/>{chev}</g>')
-    out.append(f'<g>{step_in(at(0.8))}'
+        chev = (f'<g><animateTransform attributeName="transform" type="translate" values="0 0;3 0;0 0;0 0" '
+                f'keyTimes="0;0.10;0.20;1" calcMode="discrete" dur="2.8s" begin="1.2s" repeatCount="indefinite"/>{chev}</g>')
+    out.append(f'<g>{nudge_in(at(0.66), 4)}'
                + box(bx + 4, by + 4, bw, 36, b["neon"], 3) + box(bx, by, bw, 36, b["paper"], 3)
                + ts.text(BUTTON, "body-bold", 14, bx + 16, by + 23, b["ink"])[0] + chev + "</g>")
 
@@ -260,15 +262,12 @@ def contact(key, label, url, theme, animate=True):
         chev = (f'<g><animateTransform attributeName="transform" type="translate" values="0 0;2 0;0 0;0 0" '
                 f'keyTimes="0;0.1;0.2;1" calcMode="discrete" dur="2.4s" begin="1s" repeatCount="indefinite"/>{chev}</g>')
     body = [sheet(theme, CONTACT_W, CONTACT_H, key),
-            box(14, 14, 60, 60, BRAND["ink"], 3), mark(key, 28, 28, 32, BRAND["paper"]),
-            ts.text(label, "title", 18, 88, 40, s["text"])[0],
-            ts.text(url, "body", 13, 88, 61, s["muted"])[0],
-            box(bx, by, bs, bs, s["soft"], 2), chev]
-    inner = "".join(body)
-    if animate:
-        defs, clip = print_clip(f"ct{key}", CONTACT_W, CONTACT_H)
-        inner = f"<defs>{defs}</defs><g{clip}>{inner}</g>"
-    return svg_doc(CONTACT_W, CONTACT_H, ts.defs_svg() + inner, f"{label}: {url}")
+            f'<g>{nudge_in(0.14, 4) if animate else ""}{box(14, 14, 60, 60, BRAND["ink"], 3) + mark(key, 28, 28, 32, BRAND["paper"])}</g>',
+            f'<g>{nudge_in(0.22, 3) if animate else ""}'
+            + ts.text(label, "title", 18, 88, 40, s["text"])[0]
+            + ts.text(url, "body", 13, 88, 61, s["muted"])[0] + '</g>',
+            f'<g>{nudge_in(0.28, 3) if animate else ""}{box(bx, by, bs, bs, s["soft"], 2) + chev}</g>']
+    return svg_doc(CONTACT_W, CONTACT_H, ts.defs_svg() + printed(f"ct{key}", CONTACT_W, CONTACT_H, body, animate, dur=0.38), f"{label}: {url}")
 
 
 if __name__ == "__main__":
