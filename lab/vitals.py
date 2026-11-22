@@ -261,22 +261,23 @@ def calendar(v, theme, animate=True):
         pitch, size = 8.4, 7
         active = sorted(c for c in v["days"] if c)        # quartiles of active days, as GitHub shades them
         cuts = [active[len(active) * q // 4] for q in (1, 2, 3)] if active else []
-        cols = {}
+        diag = {}
         for date, count in zip(dates, v["days"]):
             if date < first:
                 continue
             col, row = (date - first).days // 7, (date.weekday() + 1) % 7
             level = 1 + sum(count > c for c in cuts) if count else 0
             x, y = 14 + col * pitch, 90 + row * pitch
-            cols.setdefault(col, []).append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size}" height="{size}" '
-                                            f'fill="{s["heat"][level]}"/>')
-        cells = [f'<g>{step_in(0.75 + c * 0.03 if animate else None)}{"".join(r)}</g>' for c, r in sorted(cols.items())]
+            diag.setdefault(col + row, []).append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size}" height="{size}" '
+                                                  f'fill="{s["heat"][level]}"/>')
+        # cells land along diagonals, oldest corner first, like a scanner sweeping the year
+        cells = [f'<g>{step_in(0.7 + d * 0.022 if animate else None)}{"".join(r)}</g>' for d, r in sorted(diag.items())]
         # today, boxed; it blinks while the card is on screen
         cells.append(f'<rect x="{x - 1.5:.1f}" y="{y - 1.5:.1f}" width="{size + 3}" height="{size + 3}" '
                      f'fill="none" stroke="{s["text"]}" stroke-width="1.5">{blink(1.0, 2.0, low=0.2) if animate else ""}</rect>')
         body.append(f'<g shape-rendering="crispEdges">{"".join(cells)}</g>')
     days = "day" if v["current"] == 1 else "days"
-    body.append(foot(ts, theme, f"{v['last7']} this week · streak {v['current']} {days}"))
+    body.append(foot(ts, theme, f"{v['last7']} this week, a {v['current']}-day streak"))
     label = (f"GitHub contributions for @{USER}: {v['total']} in the last 12 months, {v['last7']} in the last 7 days, "
              f"current streak {v['current']} {days}, best {v['longest']}.")
     return svg_doc(STAT_W, STAT_H, ts.defs_svg() + printed("calp", STAT_W, STAT_H, body, animate), label), label

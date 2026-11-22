@@ -71,8 +71,8 @@ def plate(d, theme, animate=True):
                     + "</g>")
     if len(order) > 3:
         body.append(ts.text(f"+ {len(order) - 3} more", "body", 12.5, lx + 13, 157, s["muted"])[0])
-    split = " · ".join(f"{by_diff[k]} {k}" for k in DIFF if by_diff[k]) or "no flags yet"
-    body.append(foot(ts, theme, split + (f" · +{extra} off-plate" if extra else "")))
+    split = ", ".join(f"{by_diff[k]} {k}" for k in DIFF if by_diff[k]) or "no flags yet"
+    body.append(foot(ts, theme, split + (f", {extra} more off the plate" if extra else "")))
     label = (f"picoGym progress for @{d.get('username')}: {total} flags captured ({split}). "
              + ", ".join(f"{c} {sum(cats[c].values())}" for c in order) + ".")
     return svg_doc(STAT_W, STAT_H, ts.defs_svg() + printed("pcp", STAT_W, STAT_H, body, animate), label), label
