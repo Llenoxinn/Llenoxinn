@@ -19,40 +19,40 @@ from pixel import TROPHY, TROPHY_GLINT
 GITHUB = "https://github.com/Llenoxinn"
 PROJECTS = [
     dict(name="PlacebAIStudio", repo=None, live="https://placebeat-studio.vercel.app", art="placebo",
-         line="Every effect works. None touch your audio.",
+         line="Every effect works, except none of them touch your audio.",
          story="Reverb echoes your clicks, bass boost drops the buttons, and export hands back a silent master.",
          award=("Champion, Rage Quit Award", "at MALFUNCTION Hackathon 2026, iDE.A iAcademy"),
-         detail="MALFUNCTION 2026 champion, Rage Quit Award, with team Dexter's Fun Club",
+         detail="MALFUNCTION 2026 champion, Rage Quit Award, with Team Dexter's Fun Club",
          stack=[("react", "React"), ("ts", "TypeScript"), ("vite", "Vite"), ("vitest", "Vitest"),
                 ("matter", "Matter.js"), ("xstate", "XState"), ("claude", "Claude API")]),
     dict(name="dfCTF", repo="dfCTF", art="flag",
-         line="Solve flags. Climb the weekly board.", detail="Seven categories, first-blood tracking and timed events",
+         line="Capture flags and climb the weekly leaderboard.", detail="Seven categories, first-blood tracking, and timed events",
          stack=[("ts", "TypeScript"), ("next", "Next.js"), ("react", "React"), ("postgres", "PostgreSQL"),
                 ("drizzle", "Drizzle"), ("docker", "Docker")]),
     dict(name="BELaude", repo="BELaude", art="laude",
-         line="The GWA you need for Latin honors.", detail="Summa, magna or cum laude, semester by semester, for UP students",
+         line="Track the GWA you need for UP Latin honors.", detail="Summa, magna, or cum laude, semester by semester, for UP students",
          stack=[("react", "React"), ("ts", "TypeScript"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"),
                 ("vitest", "Vitest"), ("python", "Python")]),
     dict(name="Sylvi", repo="Sylvi", art="sylvi",
-         line="ID photo sheets, printed true to size.", detail="1×1, 2×2 and passport sizes, as PDF, PNG or JPG",
+         line="Generate print-ready ID photo sheets true to size.", detail="1×1, 2×2, and passport sizes, as PDF, PNG, or JPG",
          stack=[("ts", "TypeScript"), ("js", "JavaScript"), ("react", "React"), ("vite", "Vite"),
                 ("plpgsql", "PL/pgSQL"), ("html", "HTML"), ("css", "CSS")]),
     dict(name="Olatz-Tol", repo="Olatz-tol", art="collatz",
-         line="Pick a number. Watch it fall to 1.", detail="The Collatz 3n + 1 rule, drawn",
+         line="Pick a number and watch the 3n + 1 path fall to 1.", detail="Interactive Collatz conjecture visualizer",
          stack=[("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"), ("zustand", "Zustand"),
                 ("lucide", "Lucide")]),
     dict(name="Protein Structure Viewer Lite", repo="Protein-Structure-Viewer-Lite-", art="helix",
-         line="Proteins in 3D, on raw Three.js.", detail="No NGL, Mol* or 3Dmol.js inside",
+         line="Explore 3D protein structures built on raw Three.js.", detail="Built from scratch without NGL, Mol*, or 3Dmol.js",
          stack=[("react", "React"), ("vite", "Vite"), ("three", "Three.js"), ("r3f", "React Three Fiber"),
                 ("drei", "Drei"), ("tailwind", "Tailwind CSS")]),
     dict(name="viscal", repo="Viscal", art="lissajous",
-         line="Generative art from pure math.", detail="Lissajous curves, L-systems and Gray–Scott patterns",
+         line="Interactive generative art driven by pure math.", detail="Lissajous curves, L-systems, and Gray–Scott patterns",
          stack=[("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS")]),
     dict(name="Perk the Star", repo="GeoCeff/perk-the-star", art="orbit",
-         line="Rotating towers defend the Sun.", detail="Godot 4.6 orbital tower defense, built with GeoCeff",
+         line="Defend the Sun with rotating orbital towers.", detail="Godot 4.6 orbital tower defense, built with GeoCeff",
          stack=[("godot", "Godot"), ("c++", "C++"), ("gdscript", "GDScript")]),
     dict(name="PhyTree", repo=None, art="tree",
-         line="Trees of life, built step by step.", detail="Alignment, UPGMA and Neighbor-Joining",
+         line="Build and trace phylogenetic trees step by step.", detail="Sequence alignment, UPGMA, and Neighbor-Joining",
          stack=[("ts", "TypeScript"), ("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"),
                 ("d3", "D3.js"), ("zustand", "Zustand")]),
 ]
@@ -285,7 +285,8 @@ def project_card(p, theme, animate=True):
     body.append(pill)
     size = fit(p["name"], "title", 18, px - 8 - 88)
     body.append(ts.text(p["name"], "title", size, 88, 30, s["text"])[0])
-    body.append(ts.text(p["line"], "body", 13, 88, 52, s["muted"])[0])
+    lsize = fit(p["line"], "body", 13, CARD_W - SHADE - 12 - 88)
+    body.append(ts.text(p["line"], "body", lsize, 88, 52, s["muted"])[0])
     at = (lambda k: 0.7 + k * 0.07) if animate else (lambda k: None)
     body.append(chips(ts, theme, [full for _, full in p["stack"]], 88, 64, CARD_W - SHADE - 12, at))
     where = (f"{'public' if p['repo'] else 'private'} repository"

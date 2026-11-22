@@ -16,11 +16,11 @@ from pixel import (CHEVRON, FLASK, MEDAL, MONITOR_A, MONITOR_B, TESLA_A, TESLA_B
 
 W, H = 840, 100
 SECTIONS = [  # key, index, title, line
-    ("projects", "01 Projects", "Experiments that shipped.", "Web tools, visualizers, a game and one prank studio."),
-    ("wins", "02 Trophies", "Trophy shelf.", "Hackathons and CTFs, newest first."),
-    ("stack", "03 Bench", "Tools on the bench.", "Languages, frameworks and lab software."),
-    ("live", "04 Readings", "Readings, every hour.", "GitHub, LeetCode and picoGym, redrawn by a bot."),
-    ("contact", "05 Door", "Knock on the lab door.", "Projects, internships, or a CTF team one player short."),
+    ("projects", "01 Projects", "Experiments that shipped.", "Web apps, 3D visualizers, a CTF platform, and a tower defense game."),
+    ("wins", "02 Trophies", "Trophy shelf.", "Recent wins and placements from hackathons and CTF competitions."),
+    ("stack", "03 Bench", "Tools on the bench.", "Languages, frameworks, and tools I build and ship with."),
+    ("live", "04 Readings", "Readings, every hour.", "Live progress from GitHub, LeetCode, and picoGym, updated hourly."),
+    ("contact", "05 Door", "Knock on the lab door.", "Open to projects, internships, and CTF or hackathon teams."),
 ]
 
 
@@ -117,10 +117,10 @@ def header(key, index, title, line, theme, animate=True, layout="wide"):
 WINS = [
     dict(slug="malfunction", award="trophy", title="Champion, Rage Quit Award", event="MALFUNCTION Hackathon 2026",
          org="iDE.A iAcademy", when="21 Nov 2026", note="Team Dexter's Fun Club"),
-    dict(slug="hackforgov", award="medal", title="Top 2 student performer", event="HackforGov5 Region 7",
+    dict(slug="hackforgov", award="medal", title="Top 2 Student Performer", event="HackforGov5 Region 7",
          org="DICT Region 7", when="Oct 2026", note="National wildcard qualifier"),
     dict(slug="champion", award="trophy", title="Champion", event="Mission: CTF", org="UP Computer Science Guild",
-         when="Sep 2026", note="1st overall"),
+         when="Sep 2026", note="1st place overall"),
 ]
 
 
