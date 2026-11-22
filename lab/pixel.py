@@ -77,9 +77,71 @@ MEDAL = ['NN......NN', '.NN....NN.', '..NN..NN..', '...NNNN...', '....LL....', '
 TROPHY_GLINT = ['NPPPPPPPPN', 'NPPLPPPPPN', 'P.PPLPPP.P', 'P.PPPLPP.P', '.PPPPPPPP.',
                 '..PPPPPP..', '....LL....', '....LL....', '...LLLL...', '..PPPPPP..']
 
+# ---- handcrafted 16×16 trophy shelf awards (distinct silhouettes + crisp high-contrast engraving)
+CUP_HACK = [
+    '..PPPPPPPPPPPL..', 'NNLPPPPPPPPPPLNN', 'N.PPPPPPPPPLLL.N', 'N.PPPPPPPPPLLL.N',
+    'N.LPPPPPPPLLLN.N', '.NNPPPPPPPLLLNN.', '...LPPPPPPLLN...', '....LPPPPLLN....',
+    '.....LPPLLN.....', '......PPLN......', '......PPLN......', '.....PPPLLN.....',
+    '...PPPPPPPPLL...', '..LPPDDDDDDLLN..', '..LPPDDDDDDLLN..', '..NNNNNNNNNNNN..',
+]
+CUP_CTF = [
+    '..PPPPPPPPPPPL..', '.NLPPPPPPPPPPLN.', '.N.PPPDDDDPPL.N.', '.N.PPPDDDDPPL.N.',
+    '.NNPPPDDPPPLLNN.', '...PPPDPPPPLL...', '...LPPPPPPLLN...', '....LPPPPLLN....',
+    '.....LPPLLN.....', '......PPLN......', '......PPLN......', '.....PPPLLN.....',
+    '...PPPPPPPPLL...', '..LPPDDDDDDLLN..', '..LPPDDDDDDLLN..', '..NNNNNNNNNNNN..',
+]
+MEDAL_2 = [
+    '..NNN......NNN..', '..NLNN....NNLN..', '...NLNN..NNLN...', '....NLNNNNLN....',
+    '.....LPPPPL.....', '....PPPPPPPL....', '...PPLLLLLLPN...', '..PPLPDDDDPLPN..',
+    '..PPLPPPPDPLPN..', '..PPLPDDDDPLPN..', '..PPLPDPPPPLPN..', '..PPLPDDDDPLPN..',
+    '...PPLLLLLLPN...', '....LPPPPPPL....', '...NN.LLLL.NN...', '..NNNNNNNNNNNN..',
+]
+
+
+def sheen_mask(rows, offset, max_row=12):
+    """Return a sparse grid containing only 'S' pixels along diagonal c + r in (offset, offset + 1)."""
+    out = []
+    for r, row in enumerate(rows):
+        out.append("".join(
+            "S" if r <= max_row and ch in ("P", "L") and (c + r) in (offset, offset + 1) else "."
+            for c, ch in enumerate(row)
+        ))
+    return out
+
+
+# ---- 8×8 reading card source micro-sprites (replace the generic blinking LED square)
+SPR_BRANCH_A = [
+    'PP...LL.', 'PP...LL.', '.P....L.', '.P...L..',
+    '.PPPP...', '.P......', 'PP......', 'PP......',
+]
+SPR_BRANCH_B = [
+    'PP...NN.', 'PP...NN.', '.P....N.', '.P...N..',
+    '.PPPP...', '.P......', 'PP......', 'PP......',
+]
+SPR_PROMPT_A = [
+    '........', '.P......', '..P.....', '...P....',
+    '..P.....', '.P..LLLL', '........', '........',
+]
+SPR_PROMPT_B = [
+    '........', '.P......', '..P.....', '...P....',
+    '..P.....', '.P......', '........', '........',
+]
+SPR_FLAG_A = [
+    '.LPPPP..', '.LPPPPP.', '.LPPP...', '.LPPPP..',
+    '.L......', '.L......', '.L......', 'LLL.....',
+]
+SPR_FLAG_B = [
+    '.L.PPPP.', '.LPPPPP.', '.L.PPPP.', '.LPPP...',
+    '.L......', '.L......', '.L......', 'LLL.....',
+]
+SPR_FLAG_C = [
+    '.LPPPP..', '.L.PPPPP', '.LPPPP..', '.L.PPP..',
+    '.L......', '.L......', '.L......', 'LLL.....',
+]
+
 
 def _monitor(shift):
-    """A small lab monitor with a heartbeat trace; `shift` slides the trace for the second frame."""
+    """A small lab monitor with a sweeping phosphor ECG trace: bright head, lavender tail."""
     w, h = 14, 9
     beat = {0: 5, 1: 5, 2: 5, 3: 4, 4: 2, 5: 7, 6: 5, 7: 5, 8: 5, 9: 5, 10: 5, 11: 5}
     rows = []
@@ -89,10 +151,18 @@ def _monitor(shift):
             continue
         row = ["L"] + ["D"] * (w - 2) + ["L"]
         for x in range(1, w - 1):
-            if beat[(x - 1 + shift) % 12] == y:
-                row[x] = "P"
+            col = x - 1
+            if beat[col] == y:
+                dist = (shift - col) % 12
+                if dist == 0:
+                    row[x] = "P"       # bright phosphor write-head
+                elif dist <= 3:
+                    row[x] = "L"       # glowing afterglow tail
+                elif dist <= 7:
+                    row[x] = "N"       # fading trace
         rows.append("".join(row))
     return rows + ["....LLLLLL....", "...LLLLLLLL..."]
 
 
-MONITOR_A, MONITOR_B = _monitor(0), _monitor(4)
+MONITOR_A, MONITOR_B = _monitor(4), _monitor(8)
+MONITOR_FRAMES = [_monitor(s) for s in range(12)]

@@ -227,10 +227,12 @@ class Typesetter:
 PAPER = {
     "light": dict(sheet=BRAND["paper"], line=BRAND["lavender"], shadow=BRAND["lavender"], text=BRAND["ink"],
                   muted="#4747b8", soft="#e4e4f7", well="#dedef4", chip="#ffffff", led=BRAND["neon"],
+                  recess="#ededfa",
                   heat=["#dedef4", "#a8a8f6", BRAND["neon"], BRAND["ink"], BRAND["deep"]],
                   easy="#1a7f37", medium="#b45309", hard="#cf222e", page="#ffffff"),
     "dark": dict(sheet="#0b0b52", line="#2c2c96", shadow="#04042a", text=BRAND["paper"], muted=BRAND["lavender"],
                  soft="#17177a", well="#1a1a6c", chip="#10105e", led="#8f8fff",
+                 recess="#07073b",
                  heat=["#1a1a6c", "#3a3ab5", BRAND["neon"], "#a8a8f6", BRAND["paper"]],
                  easy="#3fb950", medium="#ffb02e", hard="#ff5c6c", page="#0d1117"),
 }
@@ -291,14 +293,108 @@ def step_in(delay):
             f'dur="{t:.2f}s" fill="freeze"/>')
 
 
+def nudge_in(delay, dy=4):
+    """Hidden until `delay`, then snaps in with a crisp 2-step upward settle (dy -> dy/2 -> 0).
+    Base element stays visible at (0, 0) so non-SMIL renderers show the finished state."""
+    if delay is None or delay <= 0:
+        return ""
+    t = delay + 0.09
+    t0 = delay / t
+    t1 = (delay + 0.045) / t
+    t2 = (delay + 0.085) / t
+    mid = max(1, dy // 2)
+    return (f'<animate attributeName="opacity" values="0;1;1;1" '
+            f'keyTimes="0;{t0:.4f};{t1:.4f};{t2:.4f}" calcMode="discrete" dur="{t:.3f}s" fill="freeze"/>'
+            f'<animateTransform attributeName="transform" type="translate" '
+            f'values="0 {dy};0 {mid};0 0;0 0" keyTimes="0;{t0:.4f};{t1:.4f};{t2:.4f}" '
+            f'calcMode="discrete" dur="{t:.3f}s" fill="freeze"/>')
+
+
 BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 
 
+def _ease_out(i, steps, power=2.3):
+    return 1.0 - (1.0 - i / steps) ** power
+
+
+def print_line_reveal(uid, w, h, inner, start=0.0, dur=0.44, steps=16):
+    """Thermal lab-sheet printer entrance: an ease-out moving neon/paper print-head line
+    with a pixel-dithered trailing fringe and carriage brackets sweeps top-to-bottom,
+    feeding the sheet out behind it. Base clip height is full `h` for non-SMIL viewers."""
+    total = start + dur + 0.01
+    hs, ys, kt = [], [], []
+    if start > 0:
+        hs.append("0")
+        ys.append("0")
+        kt.append("0")
+    for i in range(steps + 1):
+        y = round(h * _ease_out(i, steps))
+        hs.append(str(y))
+        ys.append(str(min(h - 4, y)))
+        kt.append(f"{(start + dur * i / steps) / total:.4f}")
+    kt_s = ";".join(kt)
+    n = len(hs)
+    # Print-head visible during sweep, off at start (if delayed) and off once settled
+    ops = (["0"] if start > 0 else []) + ["1"] * steps + ["0"]
+    op_s = ";".join(ops[:n])
+    bar_w = max(8, w - SHADE)
+    fringe = "".join(f"M{x} -4h4v4h-4Z" for x in range(4, bar_w - 4, 8))
+    head = (
+        f'<g opacity="0" shape-rendering="crispEdges">'
+        f'<animate attributeName="opacity" values="{op_s}" keyTimes="{kt_s}" calcMode="discrete" '
+        f'dur="{total:.2f}s" fill="freeze"/>'
+        f'<animateTransform attributeName="transform" type="translate" '
+        f'values="{";".join(f"0 {v}" for v in ys)}" keyTimes="{kt_s}" calcMode="discrete" '
+        f'dur="{total:.2f}s" fill="freeze"/>'
+        f'<path d="{fringe}" fill="{BRAND["neon"]}" opacity="0.55"/>'
+        f'<rect x="0" y="0" width="{bar_w}" height="3" fill="{BRAND["neon"]}"/>'
+        f'<rect x="0" y="1" width="{bar_w}" height="1" fill="{BRAND["paper"]}"/>'
+        f'<rect x="0" y="-1" width="4" height="5" fill="{BRAND["paper"]}"/>'
+        f'<rect x="{bar_w - 4}" y="-1" width="4" height="5" fill="{BRAND["paper"]}"/>'
+        f'</g>'
+    )
+    clip_def = (
+        f'<clipPath id="{uid}"><rect x="0" y="0" width="{w}" height="{h}">'
+        f'<animate attributeName="height" values="{";".join(hs)}" keyTimes="{kt_s}" '
+        f'calcMode="discrete" dur="{total:.2f}s" fill="freeze"/></rect></clipPath>'
+    )
+    return f'<defs>{clip_def}</defs><g clip-path="url(#{uid})">{inner}</g>{head}'
+
+
+def scan_reveal_x(uid, x0, y0, w, h, inner, start=0.15, dur=0.45, steps=16):
+    """Horizontal left-to-right phosphor scanline reveal (used for the hero wordmark)."""
+    total = start + dur + 0.01
+    ws, xs, kt = ["0"], [str(round(x0))], ["0"]
+    for i in range(steps + 1):
+        dx = round(w * _ease_out(i, steps))
+        ws.append(str(dx))
+        xs.append(str(round(x0 + min(w - 3, dx))))
+        kt.append(f"{(start + dur * i / steps) / total:.4f}")
+    kt_s = ";".join(kt)
+    ops = ["0"] + ["1"] * steps + ["0"]
+    fringe = "".join(f"M-4 {y}h4v4h-4Z" for y in range(4, int(h) - 4, 8))
+    bar = (
+        f'<g opacity="0" shape-rendering="crispEdges">'
+        f'<animate attributeName="opacity" values="{";".join(ops)}" keyTimes="{kt_s}" '
+        f'calcMode="discrete" dur="{total:.2f}s" fill="freeze"/>'
+        f'<animateTransform attributeName="transform" type="translate" '
+        f'values="{";".join(f"{v} {round(y0)}" for v in xs)}" keyTimes="{kt_s}" '
+        f'calcMode="discrete" dur="{total:.2f}s" fill="freeze"/>'
+        f'<path d="{fringe}" fill="{BRAND["neon"]}" opacity="0.55"/>'
+        f'<rect x="0" y="0" width="3" height="{round(h)}" fill="{BRAND["neon"]}"/>'
+        f'<rect x="1" y="0" width="1" height="{round(h)}" fill="{BRAND["paper"]}"/>'
+        f'</g>'
+    )
+    clip_def = (
+        f'<clipPath id="{uid}"><rect x="{round(x0)}" y="{round(y0)}" width="{round(w)}" height="{round(h)}">'
+        f'<animate attributeName="width" values="{";".join(ws)}" keyTimes="{kt_s}" '
+        f'calcMode="discrete" dur="{total:.2f}s" fill="freeze"/></rect></clipPath>'
+    )
+    return f'<defs>{clip_def}</defs><g clip-path="url(#{uid})">{inner}</g>{bar}'
+
+
 def materialize(uid, w, h, start=0.0, dur=0.7, cell=None):
-    """The sheet resolves out of pixel noise: an ordered (Bayer) dither that also sweeps
-    downward, so it reads as a retro screen drawing the card in. Each uid shifts the dither
-    matrix, so neighbouring cards never resolve in the same pattern.
-    Returns (defs, attribute for the group). The finished card is the base state."""
+    """Kept for compatibility; cards now use `printed()` with the moving print-head line."""
     import zlib
     cell = cell or (8 if w * h < 60000 else 12)
     seed = zlib.crc32(uid.encode())
@@ -322,8 +418,8 @@ def materialize(uid, w, h, start=0.0, dur=0.7, cell=None):
             f' mask="url(#{uid})"')
 
 
-def print_clip(uid, w, h, start=0.0, steps=None, dur=0.7):
-    """Every sheet's entrance; kept under its old name for the generators that call it."""
+def print_clip(uid, w, h, start=0.0, steps=None, dur=0.44):
+    """Legacy clip wrapper; prefer `printed()` for the moving print-head line entrance."""
     return materialize(uid, w, h, start, dur)
 
 
@@ -339,6 +435,36 @@ def flip(a, b, period=1.2, begin=0.0, rhythm="01"):
         return (f'<animate attributeName="opacity" values="{vals}" keyTimes="{times}" calcMode="discrete" '
                 f'dur="{period}s" begin="{begin}s" repeatCount="indefinite"/>')
     return f'<g>{anim(False)}{a}</g><g opacity="0">{anim(True)}{b}</g>'
+
+
+def frames(svgs, period=2.4, begin=0.0, order=None):
+    """Multi-frame stepped sprite animation. `order` lists the frame index shown at each
+    equal step of `period` (default: 0..len-1). Frame 0 is the resting/still base frame."""
+    seq = list(range(len(svgs))) if order is None else list(order)
+    n = len(seq)
+    times = ";".join(f"{i / n:.4f}" for i in range(n))
+    out = []
+    for idx, svg in enumerate(svgs):
+        vals = ";".join("1" if s == idx else "0" for s in seq)
+        op = "" if idx == 0 else ' opacity="0"'
+        out.append(f'<g{op}><animate attributeName="opacity" values="{vals}" keyTimes="{times}" '
+                   f'calcMode="discrete" dur="{period}s" begin="{begin}s" repeatCount="indefinite"/>{svg}</g>')
+    return "".join(out)
+
+
+def sparkle(sx, sy, unit, colour, period=5.4, begin=0.8):
+    """A 4-point pixel sparkle (+ then ·) that pops briefly at a rim during a trophy's sheen."""
+    u = unit
+    plus = f"M{sx:g} {sy - u:g}h{u:g}v{u * 3:g}h-{u:g}ZM{sx - u:g} {sy:g}h{u * 3:g}v{u:g}h-{u * 3:g}Z"
+    dot = f"M{sx:g} {sy:g}h{u:g}v{u:g}h-{u:g}Z"
+    kt = "0;0.06;0.10;0.14;0.18;1"
+    return (f'<g shape-rendering="crispEdges">'
+            f'<path d="{plus}" fill="{colour}" opacity="0">'
+            f'<animate attributeName="opacity" values="0;0;1;0;0;0" keyTimes="{kt}" calcMode="discrete" '
+            f'dur="{period}s" begin="{begin}s" repeatCount="indefinite"/></path>'
+            f'<path d="{dot}" fill="{colour}" opacity="0">'
+            f'<animate attributeName="opacity" values="0;1;0;1;0;0" keyTimes="{kt}" calcMode="discrete" '
+            f'dur="{period}s" begin="{begin}s" repeatCount="indefinite"/></path></g>')
 
 
 def blink(period=1.0, begin=0.0, on=0.5, low=0, rhythm=None):
@@ -398,35 +524,66 @@ def tag(ts, theme, text, x, y, anchor="start", fill=None, colour=None):
 
 # ------------------------------------------------------------------ live cards
 STAT_W, STAT_H = 252, 188     # three to a row on wide screens, stacked on phones
-# 252 × 212 sheets, three to a row: a source tag with a blinking LED, a big number
-# that ticks up, a pixel figure that steps in, and one quiet line at the foot.
+# 252 × 188 sheets, three to a row: a bespoke 8×8 pixel source micro-sprite on its own
+# slow staggered rhythm, a big number that ticks up, a pixel figure that steps in, and one quiet line at the foot.
+
+def _reading_icon(seed, theme, animate):
+    """Notched 18×18 pixel source badge with a bespoke staggered micro-sprite per card."""
+    from pixel import (SPR_BRANCH_A, SPR_BRANCH_B, SPR_FLAG_A, SPR_FLAG_B, SPR_FLAG_C,
+                       SPR_PROMPT_A, SPR_PROMPT_B)
+    s = PAPER[theme]
+    badge = box(14, 12, 18, 18, s["soft"], 2, s["line"])
+    if seed == "pico":
+        pal_a = dict(P=s["text"], L=s["muted"])
+        pal_b = dict(P=s["led"], L=s["muted"])
+        f0 = pixels(SPR_FLAG_A, 17, 15, 1.5, pal_a)
+        if not animate:
+            return badge + f0
+        f1 = pixels(SPR_FLAG_B, 17, 15, 1.5, pal_b)
+        f2 = pixels(SPR_FLAG_C, 17, 15, 1.5, pal_a)
+        return badge + frames([f0, f1, f2], 6.0, 4.2, [0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0])
+    if seed == "leet":
+        pal = dict(P=s["text"], L=s["led"])
+        f0 = pixels(SPR_PROMPT_A, 17, 15, 1.5, pal)
+        if not animate:
+            return badge + f0
+        f1 = pixels(SPR_PROMPT_B, 17, 15, 1.5, pal)
+        return badge + flip(f0, f1, 6.0, 2.6, "010100000000")
+    pal = dict(P=s["text"], L=s["muted"], N=s["led"])
+    f0 = pixels(SPR_BRANCH_A, 17, 15, 1.5, pal)
+    if not animate:
+        return badge + f0
+    f1 = pixels(SPR_BRANCH_B, 17, 15, 1.5, pal)
+    return badge + flip(f0, f1, 6.0, 1.0, "110000000000")
+
 
 def reading(ts, theme, seed, source, handle, value, unit, animate):
     s = PAPER[theme]
     right = STAT_W - SHADE - 14
+    rule = "".join(f"M{x} 35h4v1h-4Z" for x in range(14, right - 2, 8))
+    head = (_reading_icon(seed, theme, animate)
+            + ts.text(source, "body-bold", 12.5, 38, 25.5, s["text"], tracking=1.2)[0]
+            + ts.text(handle, "body", 11.5, right, 25, s["muted"], anchor="end")[0])
     out = [sheet(theme, STAT_W, STAT_H, seed),
-           f'<rect x="14" y="17" width="8" height="8" fill="{s["led"]}" shape-rendering="crispEdges">'
-           f'{blink(3.6, 1.5, rhythm="111111101101") if animate else ""}</rect>',
-           ts.text(source, "body-bold", 13, 29, 25.5, s["text"], tracking=1.2)[0],
-           ts.text(handle, "body", 12, right, 25, s["muted"], anchor="end")[0],
-           count_up(ts, value, "title", 36, 14, 70, s["text"], 0.55 if animate else None,
-                    unit=(unit, "body", 13.5, s["muted"], -1))]
+           f'<g>{nudge_in(0.10, 3) if animate else ""}{head}</g>',
+           f'<path d="{rule}" fill="{s["line"]}" opacity="0.7" shape-rendering="crispEdges"/>',
+           count_up(ts, value, "title", 34, 14, 71, s["text"], 0.24 if animate else None,
+                    unit=(unit, "body", 13, s["muted"], -1))]
     return out
 
 
 def foot(ts, theme, text):
     s = PAPER[theme]
-    text = text if text_width(text, "body", 12) < STAT_W - 40 else text[:40].rstrip() + "…"
-    return ts.text(text, "body", 12, 14, STAT_H - SHADE - 18, s["muted"])[0]
+    text = text if text_width(text, "body", 11.5) < STAT_W - 36 else text[:39].rstrip() + "…"
+    return ts.text(text, "body", 11.5, 14, STAT_H - SHADE - 14, s["muted"])[0]
 
 
-def printed(uid, w, h, body, animate):
-    """Wrap a card body in its print-in clip when animated."""
+def printed(uid, w, h, body, animate, dur=0.44):
+    """Wrap a card body in the moving phosphor print-head line entrance when animated."""
     inner = "".join(body)
     if not animate:
         return inner
-    defs, clip = print_clip(uid, w, h)
-    return f"<defs>{defs}</defs><g{clip}>{inner}</g>"
+    return print_line_reveal(uid, w, h, inner, 0.0, dur)
 
 
 COLUMN = 760   # the README's content column: two 376 cards, or three 252 cards, with their gaps
