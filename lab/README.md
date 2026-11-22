@@ -38,14 +38,14 @@ On PowerShell, set the token with `$env:GITHUB_TOKEN`. Keep credentials out of s
 - **Projects:** edit `PROJECTS` in `build_projects.py` (name, `repo` or `None` for private, optional `live` URL, one line, stack), then `build_static.py`. The first entry is featured and also needs `story` and `award`. A private project with a live demo links to the demo.
 - **Tools:** edit `SHELF` in `build_shelf.py`.
 - **picoGym:** edit `data/picoctf.json`, including its real `updated` date. picoCTF has no public API.
-- **Trophies:** edit `WINS` in `build_headers.py`, newest first (`award`: `trophy` or `medal`). Use only real results.
+- **Trophies:** edit `WINS` in `build_headers.py`, newest first (`award`: `hack`, `medal`, or `ctf`). Use only real results.
 - **Theme and type:** edit `BRAND`, `PAPER`, `FACES` and `TRACK` in `notebook.py`, then rerun everything.
 
 ## Motion
 
-- Entrances: every sheet resolves out of an ordered (Bayer) pixel dither that also sweeps downward; each card offsets the dither, so neighbours never resolve alike. The hero wordmark resolves the same way. Chips, trophies and heatmap cells then cut in, in reading order.
+- Entrances: every sheet feeds in behind an ease-out moving neon/paper print-head line with a dithered trailing fringe and carriage brackets (`print_line_reveal`); the hero wordmark sweeps in left-to-right behind a matching horizontal phosphor scanline (`scan_reveal_x`). Semantic chunks (icons, copy, chips, trophies, stack tiles) then settle in reading order with a crisp 2-step upward nudge (`nudge_in`).
 - Numbers race up and settle (ease-out over ten ticks), their unit moving with them. Header rules draw in block by block and the chevron lands last.
-- Loops act instead of ticking: each sprite follows a rhythm string in `flip()`. The scientist waves three times and rests, the coil crackles unevenly, the orb spits, the flask bubbles, cups glint once every few seconds. One LED per live card flickers now and then. Project icons and status lights are still.
+- Loops act instead of ticking: sprites follow stepped rhythms in `flip()` and `frames()`. The scientist waves three times and rests, the coil crackles unevenly, the monitor scrolls its ECG trace, flask bubbles climb, the 16×16 trophies and medallion catch a staggered 3-step diagonal sheen with a pixel rim sparkle, each project's pixel art runs a domain-specific micro-loop, and each live card pairs a staggered 8×8 source micro-sprite with a rare stepped chart sheen (no generic blinking LEDs). Project status lights stay still.
 - Everything that loops ships a `-still` twin for `prefers-reduced-motion`. The finished frame is the base value, so a renderer without SMIL shows the final picture.
 - SMIL runs only while an image is on screen, so cards animate as they scroll into view.
 
