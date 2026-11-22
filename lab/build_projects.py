@@ -1,36 +1,40 @@
 #!/usr/bin/env python3
-"""Draw one card per project and fill the README's PROJECTS block.
+"""Draw the project sheets and fill the README's PROJECTS block.
 
-Each card is a torn lab sheet: an original pixel icon of what the project does,
-its name, one line and the stack as notched chips. It prints in row by row and
-the icon idles on a two-frame bounce. Cards are separate images, two
-to a row on wide screens and one on phones. Private repositories are labelled
-rather than linked to a page that would 404.
+The first project is the featured one: a full-width lab sheet (with a phone
+layout) carrying big pixel art, the story, its award and the whole stack. The
+rest are torn lab sheets two to a row: an original pixel icon of what the
+project does, its name, one line and the stack as notched chips. Sheets resolve
+out of a pixel dither as they scroll into view; the chips then cut in one by one. Private repositories are
+labelled rather than linked to a page that would 404.
 
     python lab/build_projects.py
 """
 import math
 
-from notebook import (ASSETS, BRAND, PAPER, SHADE, Typesetter, blink, box, fit, hop, mark, pixels, print_clip,
-                      replace_block, scene, sheet, step_in, svg_doc, text_width)
+from notebook import (ASSETS, BRAND, PAPER, SHADE, Typesetter, box, fit, flip, mark, paragraph, pixels,
+                      print_clip, replace_block, scene, sheet, sprite_at, step_in, svg_doc, text_width, wide_scene)
+from pixel import TROPHY, TROPHY_GLINT
 
 GITHUB = "https://github.com/Llenoxinn"
 PROJECTS = [
     dict(name="PlacebAIStudio", repo=None, live="https://placebeat-studio.vercel.app", art="placebo",
          line="Every effect works. None touch your audio.",
-         detail="MALFUNCTION 2026 champion, Rage Quit Award · team Dexter's Fun Club",
+         story="Reverb echoes your clicks, bass boost drops the buttons, and export hands back a silent master.",
+         award=("Champion, Rage Quit Award", "at MALFUNCTION Hackathon 2026, iDE.A iAcademy"),
+         detail="MALFUNCTION 2026 champion, Rage Quit Award, with team Dexter's Fun Club",
          stack=[("react", "React"), ("ts", "TypeScript"), ("vite", "Vite"), ("vitest", "Vitest"),
                 ("matter", "Matter.js"), ("xstate", "XState"), ("claude", "Claude API")]),
     dict(name="dfCTF", repo="dfCTF", art="flag",
-         line="Solve flags. Climb the weekly board.", detail="Seven categories · first blood · timed events",
+         line="Solve flags. Climb the weekly board.", detail="Seven categories, first-blood tracking and timed events",
          stack=[("ts", "TypeScript"), ("next", "Next.js"), ("react", "React"), ("postgres", "PostgreSQL"),
                 ("drizzle", "Drizzle"), ("docker", "Docker")]),
     dict(name="BELaude", repo="BELaude", art="laude",
-         line="The GWA you need for Latin honors.", detail="Summa, Magna, Cum laude · semester by semester, UP",
+         line="The GWA you need for Latin honors.", detail="Summa, magna or cum laude, semester by semester, for UP students",
          stack=[("react", "React"), ("ts", "TypeScript"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"),
                 ("vitest", "Vitest"), ("python", "Python")]),
     dict(name="Sylvi", repo="Sylvi", art="sylvi",
-         line="ID photo sheets, printed true to size.", detail="1×1, 2×2, passport · PDF, PNG, JPG",
+         line="ID photo sheets, printed true to size.", detail="1×1, 2×2 and passport sizes, as PDF, PNG or JPG",
          stack=[("ts", "TypeScript"), ("js", "JavaScript"), ("react", "React"), ("vite", "Vite"),
                 ("plpgsql", "PL/pgSQL"), ("html", "HTML"), ("css", "CSS")]),
     dict(name="Olatz-Tol", repo="Olatz-tol", art="collatz",
@@ -42,13 +46,13 @@ PROJECTS = [
          stack=[("react", "React"), ("vite", "Vite"), ("three", "Three.js"), ("r3f", "React Three Fiber"),
                 ("drei", "Drei"), ("tailwind", "Tailwind CSS")]),
     dict(name="viscal", repo="Viscal", art="lissajous",
-         line="Generative art from pure math.", detail="Lissajous · L-systems · Gray–Scott",
+         line="Generative art from pure math.", detail="Lissajous curves, L-systems and Gray–Scott patterns",
          stack=[("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS")]),
     dict(name="Perk the Star", repo="GeoCeff/perk-the-star", art="orbit",
          line="Rotating towers defend the Sun.", detail="Godot 4.6 orbital tower defense, built with GeoCeff",
          stack=[("godot", "Godot"), ("c++", "C++"), ("gdscript", "GDScript")]),
     dict(name="PhyTree", repo=None, art="tree",
-         line="Trees of life, built step by step.", detail="Alignment · UPGMA · Neighbor-Joining",
+         line="Trees of life, built step by step.", detail="Alignment, UPGMA and Neighbor-Joining",
          stack=[("ts", "TypeScript"), ("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"),
                 ("d3", "D3.js"), ("zustand", "Zustand")]),
 ]
@@ -256,12 +260,11 @@ def chips(ts, theme, stack, x, y, room, delay):
 def status(ts, theme, p, right, y, animate):
     """Top-right tag: where the code lives. A lit LED means you can open it."""
     s = PAPER[theme]
-    words = ("public" if p["repo"] else "private") + (" · live" if p.get("live") else "")
+    words = "live demo" if p.get("live") and not p["repo"] else ("public" if p["repo"] else "private")
     w = text_width(words, "pixel", 12) + 28
     x = right - w
     lit = bool(p["repo"] or p.get("live"))
-    led = (f'<rect x="{x + 7}" y="{y + 7}" width="6" height="6" fill="{s["led"] if lit else s["muted"]}">'
-           f'{blink(1.4, 1.0, 0.7) if animate and lit else ""}</rect>')
+    led = f'<rect x="{x + 7}" y="{y + 7}" width="6" height="6" fill="{s["led"] if lit else s["muted"]}"/>'
     return (box(x, y, w, 20, s["soft"], 2) + led
             + ts.text(words, "pixel", 12, x + 19, y + 14.5, s["text"])[0]), x
 
@@ -277,8 +280,7 @@ def project_card(p, theme, animate=True):
     ts = Typesetter("p")
     body = [sheet(theme, CARD_W, CARD_H, p["name"])]
     art = icon(p, 16, 18)
-    body.append(box(14, 16, 60, 60, BRAND["ink"], 3)
-                + (f'<g>{hop(PIXEL, 1.6, 1.2)}{art}</g>' if animate else art))
+    body.append(box(14, 16, 60, 60, BRAND["ink"], 3) + art)
     pill, px = status(ts, theme, p, CARD_W - SHADE - 12, 14, animate)
     body.append(pill)
     size = fit(p["name"], "title", 18, px - 8 - 88)
@@ -298,17 +300,85 @@ def project_card(p, theme, animate=True):
     return svg_doc(CARD_W, CARD_H, ts.defs_svg() + inner, alt), alt
 
 
+def big_art(p, x, y, scale):
+    colours = dict(P=BRAND["paper"], L=BRAND["lavender"], N=BRAND["neon"], D=BRAND["deep"])
+    cells = ARTS[p["art"]]()
+    rows = ["".join(cells.get((c, r), ".") for c in range(GRID)) for r in range(GRID)]
+    return pixels(rows, x, y, scale, colours)
+
+
+def feature_card(p, theme, layout, animate=True):
+    """The featured project: big pixel art, story, award band and full stack on one wide sheet."""
+    s = PAPER[theme]
+    ts = Typesetter("ft")
+    wide = layout == "wide"
+    W = 840 if wide else 400
+    right = W - SHADE - 14
+    art_box, scale = (148, 6.6) if wide else (96, 4.4)
+    art = big_art(p, 18 + (art_box - GRID * scale) / 2, 20 + (art_box - GRID * scale) / 2, scale)
+    body = [box(18, 20, art_box, art_box, BRAND["ink"], 4),
+            art]
+    tx = 18 + art_box + 24
+    pill, px = status(ts, theme, p, right if wide else tx - status(ts, theme, p, 0, 0, False)[1], 18 if wide else 66,
+                      animate)
+    body.append(pill)
+    tsize = fit(p["name"], "title", 30 if wide else 24, (px - 12 if wide else right) - tx)
+    body.append(ts.text(p["name"], "title", tsize, tx, 54 if wide else 52, s["text"])[0])
+    if wide:
+        body.append(ts.text(p["line"], "body", 15.5, tx, 82, s["text"])[0])
+        story, y = paragraph(ts, p["story"], "body", 13.5, tx, 104, right - tx, s["muted"])
+        ax = tx
+    else:
+        line, y = paragraph(ts, p["line"], "body", 15, 18, 146, right - 18, s["text"])
+        story, y = paragraph(ts, p["story"], "body", 13.5, 18, y + 22, right - 18, s["muted"])
+        body.append(line)
+        ax = 18
+    body.append(story)
+    # the award, on a band of its own with a glinting trophy
+    title, event = p["award"]
+    by = y + 14
+    bh = 32 if wide else 50
+    cup = dict(P=s["text"], N=s["text"], L=s["muted"])      # ink on paper, paper on navy
+    ta = sprite_at(TROPHY, ax + 8, by + (bh - 20) / 2, 2, cup)
+    tb = sprite_at(TROPHY_GLINT, ax + 8, by + (bh - 20) / 2, 2, dict(cup, L=BRAND["neon"]))
+    body.append(box(ax, by, right - ax, bh, s["soft"], 2)
+                + (flip(ta, tb, 4.8, 1.2, rhythm="000000000100") if animate else ta))
+    if wide:
+        tw = text_width(title, "title", 14)
+        body.append(ts.text(title, "title", 14, ax + 38, by + 21, s["text"])[0]
+                    + ts.text(event, "body", 13, ax + 38 + tw + 12, by + 21, s["muted"])[0])
+    else:
+        body.append(ts.text(title, "title", 14, ax + 38, by + 21, s["text"])[0]
+                    + ts.text(event, "body", fit(event, "body", 12.5, right - ax - 46), ax + 38, by + 39, s["muted"])[0])
+    cy = by + bh + 12
+    at = (lambda k: 0.7 + k * 0.07) if animate else (lambda k: None)
+    body.append(chips(ts, theme, [full for _, full in p["stack"]], ax, cy, right + 2, at))
+    H = int(max(cy + 22, 20 + art_box) + 16 + SHADE)
+    body.insert(0, sheet(theme, W, H, f"feature{layout}"))
+    alt = (f"{p['name']}, featured, private repository with a live demo: {p['line']} {p['story']} "
+           f"{title} {event}. Built with {', '.join(full for _, full in p['stack'])}.")
+    inner = "".join(body)
+    if animate:
+        defs, clip = print_clip(f"ft{layout}", W, H, steps=12, dur=0.7)
+        inner = f'<defs>{defs}</defs><g{clip}>{inner}</g>'
+    return svg_doc(W, H, ts.defs_svg() + inner, alt), alt
+
+
 def slug(name):
     return name.lower().replace(" ", "-")
 
 
 def block():
+    lead, rest = PROJECTS[0], PROJECTS[1:]
+    stem = f"projects/{slug(lead['name'])}-feature"
+    hero = wide_scene(stem, f"{stem}-narrow", feature_card(lead, "light", "wide")[1])
     cells = []
-    for p in PROJECTS:
+    for p in rest:
         _, alt = project_card(p, "light")
         pic = scene(f"projects/{slug(p['name'])}", alt, CARD_W, CARD_H)
         cells.append(f'<a href="{link(p)}">{pic}</a>' if link(p) else pic)
-    return '<p align="center">\n' + "\n".join(cells) + "\n</p>"
+    return (f'<p align="center">\n<a href="{link(lead)}">{hero}</a>\n</p>\n'
+            '<p align="center">\n' + "\n".join(cells) + "\n</p>")
 
 
 if __name__ == "__main__":
@@ -316,9 +386,14 @@ if __name__ == "__main__":
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("*.svg"):
         old.unlink()
+    lead = PROJECTS[0]
     for theme in PAPER:
-        for p in PROJECTS:
+        for layout, stem in (("wide", f"{slug(lead['name'])}-feature"), ("narrow", f"{slug(lead['name'])}-feature-narrow")):
+            (out / f"{stem}-{theme}.svg").write_text(feature_card(lead, theme, layout)[0], encoding="utf-8")
+            (out / f"{stem}-still-{theme}.svg").write_text(feature_card(lead, theme, layout, False)[0], encoding="utf-8")
+        for p in PROJECTS[1:]:
             (out / f"{slug(p['name'])}-{theme}.svg").write_text(project_card(p, theme)[0], encoding="utf-8")
             (out / f"{slug(p['name'])}-still-{theme}.svg").write_text(project_card(p, theme, False)[0], encoding="utf-8")
     changed = replace_block("PROJECTS", block())
-    print(f"wrote {len(PROJECTS)} project cards per theme, README {'updated' if changed else 'unchanged'}")
+    print(f"wrote the featured sheet and {len(PROJECTS) - 1} project cards per theme, "
+          f"README {'updated' if changed else 'unchanged'}")
