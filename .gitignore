@@ -1,6 +1,5 @@
 __pycache__/
 *.pyc
-lab/render3d/target/
 lab/.runtime/
 output/
 .playwright-cli/
