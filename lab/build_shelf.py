@@ -9,7 +9,7 @@ are notched pixel squares that cut in one after another, without a fade.
 """
 import re
 
-from notebook import (ASSETS, BRAND, PAPER, Typesetter, box, mark, nudge_in, replace_block, svg_doc,
+from notebook import (ASSETS, BRAND, PAPER, Typesetter, box, mark, nudge_in, replace_block, stamp, svg_doc,
                       text_width, themed)
 
 OUT = ASSETS / "stack"
@@ -69,10 +69,12 @@ def block():
         if kind == "group":
             if name in NEW_LINE:
                 cells.append("<br>")     # each line starts with its folder label, never orphaning it
-            cells.append(themed(f"stack/group-{name}", f"{GROUP[name]}:", group_tile(name, "light", n)[1], TILE,
-                                title=GROUP[name]))
+            gsvg, gw = group_tile(name, "light", n)
+            cells.append(themed(f"stack/group-{name}", f"{GROUP[name]}:", gw, TILE,
+                                title=GROUP[name], query="v=" + stamp(gsvg)))
         else:
-            cells.append(themed(f"stack/{slug(name)}", name, TILE, TILE, title=name))
+            tsvg = tile(name, "light", n)
+            cells.append(themed(f"stack/{slug(name)}", name, TILE, TILE, title=name, query="v=" + stamp(tsvg)))
     return '<p align="center">\n' + "\n".join(cells) + "\n</p>"
 
 

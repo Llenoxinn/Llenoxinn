@@ -589,17 +589,18 @@ def printed(uid, w, h, body, animate, dur=0.44):
 COLUMN = 760   # the README's content column: two 376 cards, or three 252 cards, with their gaps
 
 
-def wide_scene(stem, narrow, alt, folder="assets", width=COLUMN):
+def wide_scene(stem, narrow, alt, folder="assets", width=COLUMN, query=""):
     """<picture> for a full-width animated image with a phone layout: still or moving, by theme."""
+    q = f"?{query}" if query else ""
     def src(media, name):
-        return f'<source media="{media}" srcset="{folder}/{name}.svg">'
+        return f'<source media="{media}" srcset="{folder}/{name}.svg{q}">'
     phone, still, dark = "(max-width: 600px)", "(prefers-reduced-motion: reduce)", "(prefers-color-scheme: dark)"
     return ('<picture>'
             + src(f"{phone} and {still} and {dark}", f"{narrow}-still-dark") + src(f"{phone} and {still}", f"{narrow}-still-light")
             + src(f"{phone} and {dark}", f"{narrow}-dark") + src(phone, f"{narrow}-light")
             + src(f"{still} and {dark}", f"{stem}-still-dark") + src(still, f"{stem}-still-light")
             + src(dark, f"{stem}-dark")
-            + f'<img src="{folder}/{stem}-light.svg" alt="{esc(alt)}" width="{width}"></picture>')
+            + f'<img src="{folder}/{stem}-light.svg{q}" alt="{esc(alt)}" width="{width}"></picture>')
 
 
 def wrap(text, face, size, width):

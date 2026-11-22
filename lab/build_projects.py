@@ -13,7 +13,7 @@ labelled rather than linked to a page that would 404.
 import math
 
 from notebook import (ASSETS, BRAND, PAPER, SHADE, Typesetter, box, fit, frames, mark, nudge_in, paragraph, pixels,
-                      printed, replace_block, scene, sheet, sparkle, svg_doc, text_width, wide_scene)
+                      printed, replace_block, scene, sheet, sparkle, stamp, svg_doc, text_width, wide_scene)
 from pixel import CUP_HACK, sheen_mask
 
 GITHUB = "https://github.com/Llenoxinn"
@@ -799,11 +799,12 @@ def slug(name):
 def block():
     lead, rest = PROJECTS[0], PROJECTS[1:]
     stem = f"projects/{slug(lead['name'])}-feature"
-    hero = wide_scene(stem, f"{stem}-narrow", feature_card(lead, "light", "wide")[1])
+    fsvg, falt = feature_card(lead, "light", "wide")
+    hero = wide_scene(stem, f"{stem}-narrow", falt, query="v=" + stamp(fsvg))
     cells = []
     for p in rest:
-        _, alt = project_card(p, "light")
-        pic = scene(f"projects/{slug(p['name'])}", alt, CARD_W, CARD_H)
+        psvg, alt = project_card(p, "light")
+        pic = scene(f"projects/{slug(p['name'])}", alt, CARD_W, CARD_H, query="v=" + stamp(psvg))
         cells.append(f'<a href="{link(p)}">{pic}</a>' if link(p) else pic)
     return (f'<p align="center">\n<a href="{link(lead)}">{hero}</a>\n</p>\n'
             '<p align="center">\n' + "\n".join(cells) + "\n</p>")
