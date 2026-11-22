@@ -87,6 +87,12 @@
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/wsl-dark.svg"><img src="assets/stack/wsl-light.svg" alt="WSL" title="WSL" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/ucsf-chimerax-dark.svg"><img src="assets/stack/ucsf-chimerax-light.svg" alt="UCSF ChimeraX" title="UCSF ChimeraX" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/audacity-dark.svg"><img src="assets/stack/audacity-light.svg" alt="Audacity" title="Audacity" width="48" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-ai-dark.svg"><img src="assets/stack/group-ai-light.svg" alt="AI agents:" title="AI agents" width="95" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/antigravity-dark.svg"><img src="assets/stack/antigravity-light.svg" alt="Antigravity" title="Antigravity" width="48" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/codex-dark.svg"><img src="assets/stack/codex-light.svg" alt="Codex" title="Codex" width="48" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/claude-dark.svg"><img src="assets/stack/claude-light.svg" alt="Claude" title="Claude" width="48" height="48"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/opencode-dark.svg"><img src="assets/stack/opencode-light.svg" alt="OpenCode" title="OpenCode" width="48" height="48"></picture>
+<br>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/group-design-dark.svg"><img src="assets/stack/group-design-light.svg" alt="Design:" title="Design" width="75" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/figma-dark.svg"><img src="assets/stack/figma-light.svg" alt="Figma" title="Figma" width="48" height="48"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/stack/adobe-photoshop-dark.svg"><img src="assets/stack/adobe-photoshop-light.svg" alt="Adobe Photoshop" title="Adobe Photoshop" width="48" height="48"></picture>

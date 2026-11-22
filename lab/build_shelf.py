@@ -21,11 +21,12 @@ SHELF = [
     ("backend", ["Node.js", "Supabase", "PostgreSQL", "Drizzle"]),
     ("ship", ["Docker", "Vercel", "GitHub Actions", "Vitest", "Playwright"]),
     ("tools", ["Godot", "WSL", "UCSF ChimeraX", "Audacity"]),
+    ("ai", ["Antigravity", "Codex", "Claude", "OpenCode"]),
     ("design", ["Figma", "Adobe Photoshop", "Adobe InDesign", "Adobe Illustrator", "Canva"]),
 ]
 GROUP = {"lang": "Languages", "web": "Web", "backend": "Back end", "ship": "Test and ship", "tools": "Tools",
-         "design": "Design"}
-NEW_LINE = {"web", "backend", "tools"}    # ship shares a line with backend, design with tools, on wide screens
+         "ai": "AI agents", "design": "Design"}
+NEW_LINE = {"web", "backend", "tools", "design"}    # ship shares backend's line, AI agents share tools' line
 
 
 def slug(name):
