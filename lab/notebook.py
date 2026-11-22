@@ -340,7 +340,7 @@ def strip_tag(ts, w, text, live=False, y=0, animate=True):
 
 
 # Progress cards: three to a row on wide screens, stacked on phones
-STAT_W, STAT_H = 252, 212
+STAT_W, STAT_H = 252, 188
 
 
 def readout(ts, theme, number, label, delay, x=14, y=82):
@@ -550,3 +550,179 @@ def ambient(uid, w, h, theme, seed=0, cells=9, bits=12, fade=70, opacity=1.0):
                    f'values="0 0;{dx:.0f} 0;0 0" dur="{dur:.1f}s" repeatCount="indefinite"/>{g}</g>')
     defs.append(ts.defs_svg()[len("<defs>"):-len("</defs>")])
     return "".join(defs), f'<g mask="url(#{uid}m)">{"".join(out)}</g>'
+
+
+# ================================================================== lab sheets
+# The profile's card language since Nov 2026, taken from the portfolio's paper
+# sheets: a torn pixel edge top and bottom, square notched pixel geometry and a
+# hard offset shadow. Pixelify for numbers and tags, Chakra Petch for text,
+# Inter Bold for titles. Motion is stepped like a sprite: sheets print in row by
+# row, counters tick, pixel art swaps between two frames. Nothing eases.
+
+FACES.update({"pixel": "PixelifySans-Bold.ttf", "body": "ChakraPetch-Regular.ttf", "body-bold": "ChakraPetch-Bold.ttf"})
+TRACK.update({"title": -0.03})
+FACES["title"] = "Inter-Bold.otf"
+
+PAPER = {
+    "light": dict(sheet=BRAND["paper"], line=BRAND["lavender"], shadow=BRAND["lavender"], text=BRAND["ink"],
+                  muted="#4747b8", soft="#e4e4f7", well="#dedef4", chip="#ffffff", led=BRAND["neon"],
+                  heat=["#dedef4", "#a8a8f6", BRAND["neon"], BRAND["ink"], BRAND["deep"]],
+                  easy="#1a7f37", medium="#b45309", hard="#cf222e", page="#ffffff"),
+    "dark": dict(sheet="#0b0b52", line="#2c2c96", shadow="#04042a", text=BRAND["paper"], muted=BRAND["lavender"],
+                 soft="#17177a", well="#1a1a6c", chip="#10105e", led="#8f8fff",
+                 heat=["#1a1a6c", "#3a3ab5", BRAND["neon"], "#a8a8f6", BRAND["paper"]],
+                 easy="#3fb950", medium="#ffb02e", hard="#ff5c6c", page="#0d1117"),
+}
+TEAR, SHADE = 6, 4      # torn edge depth and shadow offset, px
+
+
+def _torn(n, seed, depth=3):
+    rng = random.Random(seed)
+    k, out = rng.randint(0, depth), []
+    for _ in range(n):
+        k = max(0, min(depth, k + rng.choice((-1, 0, 1, 1, -1))))
+        out.append(k * TEAR // depth)
+    return out
+
+
+def torn_path(w, h, seed, step=4, top=True, bottom=True):
+    """A sheet with torn pixel edges: every `step` px the edge steps up or down a notch."""
+    n = math.ceil(w / step)
+    t = _torn(n, f"{seed}t") if top else [0] * n
+    b = _torn(n, f"{seed}b") if bottom else [0] * n
+    d = f"M0 {t[0]}"
+    for i, y in enumerate(t):
+        d += f"V{y}H{min(w, (i + 1) * step)}"
+    for i in reversed(range(n)):
+        d += f"V{h - b[i]}H{i * step}"
+    return d + "Z"
+
+
+def sheet(theme, w, h, seed, top=True, bottom=True):
+    """The paper the card is on and its hard shadow. Content sits in (0..w-SHADE, TEAR..h-SHADE-TEAR)."""
+    s = PAPER[theme]
+    d = torn_path(w - SHADE, h - SHADE, seed, top=top, bottom=bottom)
+    return (f'<g shape-rendering="crispEdges"><path transform="translate({SHADE} {SHADE})" d="{d}" fill="{s["shadow"]}"/>'
+            f'<path d="{d}" fill="{s["sheet"]}" stroke="{s["line"]}" stroke-width="1"/></g>')
+
+
+def box(x, y, w, h, fill, s=3, stroke=None):
+    """A notched pixel box: each corner steps in by one block."""
+    st = f' stroke="{stroke}" stroke-width="1"' if stroke else ""
+    return f'<path d="{notch(x, y, w, h, s)}" fill="{fill}"{st} shape-rendering="crispEdges"/>'
+
+
+def sprite_at(rows, x, y, scale, palette=None):
+    colours = palette or dict(P=BRAND["paper"], L=BRAND["lavender"], N=BRAND["neon"], D=BRAND["deep"])
+    return pixels(rows, x, y, scale, colours)
+
+
+# ------------------------------------------------------------------ stepped motion
+# Every animation leaves the finished picture as the base value, so a renderer
+# without SMIL shows the final frame. Loops need a -still twin.
+
+def step_in(delay):
+    """Hidden until `delay`, then on: no fade, a frame cut."""
+    if delay is None or delay <= 0:
+        return ""
+    t = delay + 0.01
+    return (f'<animate attributeName="opacity" values="0;1" keyTimes="0;{delay / t:.4f}" calcMode="discrete" '
+            f'dur="{t:.2f}s" fill="freeze"/>')
+
+
+def print_clip(uid, w, h, start=0.0, steps=10, dur=0.6):
+    """A clip that uncovers the card top to bottom in `steps` hard bands, like a sheet
+    feeding out of a printer. Returns (defs, attribute for the group)."""
+    total = start + dur
+    vals = [0] + [h * i / steps for i in range(steps + 1)]
+    times = [0] + [(start + dur * i / steps) / total for i in range(steps + 1)]
+    anim = (f'<animate attributeName="height" values="{";".join(f"{v:.1f}" for v in vals)}" '
+            f'keyTimes="{";".join(f"{t:.4f}" for t in times)}" calcMode="discrete" dur="{total:.2f}s" fill="freeze"/>')
+    return (f'<clipPath id="{uid}"><rect x="0" y="0" width="{w}" height="{h}">{anim}</rect></clipPath>',
+            f' clip-path="url(#{uid})"')
+
+
+def flip(a, b, period=1.2, begin=0.0):
+    """Two sprite frames swapping on a beat. Frame a is the still."""
+    def anim(vals):
+        return (f'<animate attributeName="opacity" values="{vals}" keyTimes="0;0.5" calcMode="discrete" '
+                f'dur="{period}s" begin="{begin}s" repeatCount="indefinite"/>')
+    return f'<g>{anim("1;0")}{a}</g><g opacity="0">{anim("0;1")}{b}</g>'
+
+
+def blink(period=1.0, begin=0.0, on=0.5, low=0):
+    return (f'<animate attributeName="opacity" values="1;{low}" keyTimes="0;{on}" calcMode="discrete" '
+            f'dur="{period}s" begin="{begin}s" repeatCount="indefinite"/>')
+
+
+def hop(dy=2, period=1.2, begin=0.0):
+    """A one-notch idle bounce, two frames, like a sprite breathing."""
+    return (f'<animateTransform attributeName="transform" type="translate" values="0 0;0 {-dy}" keyTimes="0;0.5" '
+            f'calcMode="discrete" dur="{period}s" begin="{begin}s" repeatCount="indefinite"/>')
+
+
+def count_up(ts, value, face, size, x, y, fill, start=None, frames=8, dur=0.64, anchor="start"):
+    """A number that ticks up through `frames` values, then holds. start=None: just the number."""
+    final = ts.text(f"{value:,}", face, size, x, y, fill, anchor=anchor)[0]
+    if start is None or not value:
+        return final
+    total = start + dur + 0.01
+    out = []
+    marks = [0] + [start + dur * i / frames for i in range(1, frames)]
+    for i, t0 in enumerate(marks):
+        n = round(value * i / frames)
+        t1 = marks[i + 1] if i + 1 < len(marks) else start + dur
+        g = ts.text(f"{n:,}", face, size, x, y, fill, anchor=anchor)[0]
+        out.append(f'<g opacity="0"><animate attributeName="opacity" values="0;1;0" '
+                   f'keyTimes="0;{t0 / total:.4f};{t1 / total:.4f}" calcMode="discrete" dur="{total:.2f}s" '
+                   f'fill="freeze"/>{g}</g>')
+    out.append(f'<g>{step_in(start + dur)}{final}</g>')
+    return "".join(out)
+
+
+def fit(text, face, size, room, floor=8):
+    while text_width(text, face, size) > room and size > floor:
+        size -= 0.5
+    return size
+
+
+def tag(ts, theme, text, x, y, anchor="start", fill=None, colour=None):
+    """A small Pixelify label in a notched chip. Returns (svg, width)."""
+    s = PAPER[theme]
+    w = text_width(text, "pixel", 10.5) + 14
+    x0 = x - (w if anchor == "end" else 0)
+    return (box(x0, y, w, 18, fill or s["soft"], 2)
+            + ts.text(text, "pixel", 10.5, x0 + 7, y + 13, colour or s["text"])[0]), w
+
+
+# ------------------------------------------------------------------ live cards
+# 252 × 212 sheets, three to a row: a source tag with a blinking LED, a big number
+# that ticks up, a pixel figure that steps in, and one quiet line at the foot.
+
+def reading(ts, theme, seed, source, handle, value, unit, animate):
+    s = PAPER[theme]
+    right = STAT_W - SHADE - 14
+    out = [sheet(theme, STAT_W, STAT_H, seed),
+           f'<rect x="14" y="17" width="8" height="8" fill="{s["led"]}" shape-rendering="crispEdges">'
+           f'{blink(1.2, 0.8, 0.6) if animate else ""}</rect>',
+           ts.text(source, "body-bold", 13, 29, 25.5, s["text"], tracking=1.2)[0],
+           ts.text(handle, "body", 12, right, 25, s["muted"], anchor="end")[0],
+           count_up(ts, value, "title", 36, 14, 70, s["text"], 0.55 if animate else None)]
+    nw = text_width(f"{value:,}", "title", 36)
+    out.append(ts.text(unit, "body", 13.5, 14 + nw + 8, 69, s["muted"])[0])
+    return out
+
+
+def foot(ts, theme, text):
+    s = PAPER[theme]
+    text = text if text_width(text, "body", 12) < STAT_W - 40 else text[:40].rstrip() + "…"
+    return ts.text(text, "body", 12, 14, STAT_H - SHADE - 18, s["muted"])[0]
+
+
+def printed(uid, w, h, body, animate):
+    """Wrap a card body in its print-in clip when animated."""
+    inner = "".join(body)
+    if not animate:
+        return inner
+    defs, clip = print_clip(uid, w, h)
+    return f"<defs>{defs}</defs><g{clip}>{inner}</g>"

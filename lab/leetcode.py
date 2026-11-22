@@ -13,8 +13,8 @@ import datetime as dt
 import json
 import urllib.request
 
-from notebook import (ASSETS, BRAND, MANILA, SHEET, STAT_H, STAT_W, THEMES, Typesetter, card, footnote, fx, readout,
-                      replace_block, scene, stamp, strip, strip_tag, svg_doc)
+from notebook import (ASSETS, MANILA, PAPER, SHADE, STAT_H, STAT_W, THEMES, Typesetter, blink, foot, printed, reading,
+                      replace_block, scene, stamp, step_in, svg_doc)
 
 HANDLE = "Acetylsphae"
 PROFILE = f"https://leetcode.com/u/{HANDLE}/"
@@ -63,37 +63,36 @@ def day(d):
 
 
 def leetcard(v, theme, animate=True):
-    """LeetCode card: problems solved, then one segmented meter per difficulty against the question bank."""
-    s = SHEET[theme]
+    """LeetCode card: problems solved ticks up, then one block meter per difficulty against the question bank."""
+    s = PAPER[theme]
     ts = Typesetter("lc")
     total = v["solved"].get("All", 0)
-    head, typed = strip(ts, STAT_W, 0, [("leetcode", BRAND["lavender"]), (" > ", BRAND["neon"]),
-                                        (HANDLE.lower(), BRAND["paper"])], start=0.1 if animate else None, top=True)
-    at = (lambda off: typed + off) if animate else (lambda off: None)
-    body = [card(theme, STAT_W, STAT_H), head, strip_tag(ts, STAT_W, "live", live=True, animate=animate),
-            readout(ts, theme, total, "solved", at(0.1))]
-    x0, x1, seg = 76, 196, 7.5
+    body = reading(ts, theme, "leet", "LEETCODE", f"@{HANDLE}", total, "solved", animate)
+    right = STAT_W - SHADE - 14
+    x0, x1, seg = 80, right - 30, 8
     for k, level in enumerate(DIFF):
-        y = 112 + k * 24
+        y = 100 + k * 21
         got, of = v["solved"].get(level, 0), v["bank"].get(level, 0)
         colour = s[level.lower()]
-        body.append(ts.text(level, "code", 12, 14, y, colour)[0])
-        body.append(ts.text(str(got), "code-bold", 12, STAT_W - 14, y, s["text"], anchor="end")[0])
-        count = round((x1 - x0) / seg)
+        body.append(ts.text(level, "body-bold", 12.5, 14, y, colour)[0])
+        body.append(ts.text(str(got), "body-bold", 12.5, right, y, s["text"], anchor="end")[0])
+        count = int((x1 - x0) // seg)
         lit = min(count, -(-got * count // of)) if got and of else 0
+        blocks = []
         for i in range(count):
-            fill = colour if i < lit else s["well"]
-            anim = fx(at(0.3 + k * 0.1 + i * 0.03), 0.15) if i < lit else ""
-            if animate and i == lit - 1:     # the newest segment keeps charging
-                anim += ('<animate attributeName="opacity" values="1;0.3;1" dur="1.6s" begin="3s" '
-                         'repeatCount="indefinite"/>')
-            body.append(f'<rect x="{x0 + i * seg:.1f}" y="{y - 9}" width="{seg - 2}" height="10" rx="1" fill="{fill}">{anim}</rect>')
+            on = i < lit
+            motion = step_in(0.8 + k * 0.12 + i * 0.03) if animate and on else ""
+            if animate and i == lit - 1:     # the newest block keeps blinking
+                motion += blink(1.2, 2.5, low=0.35)
+            blocks.append(f'<rect x="{x0 + i * seg}" y="{y - 10}" width="{seg - 2}" height="11" '
+                          f'fill="{colour if on else s["well"]}">{motion}</rect>')
+        body.append(f'<g shape-rendering="crispEdges">{"".join(blocks)}</g>')
     latest = f"latest: {v['recent'][0][0]}" if v["recent"] else f"{v['active']} active days"
-    body.append(footnote(ts, theme, latest, at(0.9)))
+    body.append(foot(ts, theme, latest))
     split = ", ".join(f"{v['solved'].get(l, 0)} {l.lower()}" for l in DIFF)
     label = (f"LeetCode @{HANDLE}: {total} problems solved ({split}) over {v['active']} active days"
              + (f"; latest {v['recent'][0][0]}, {day(v['recent'][0][1])}." if v["recent"] else "."))
-    return svg_doc(STAT_W, STAT_H, ts.defs_svg() + "".join(body), label), label
+    return svg_doc(STAT_W, STAT_H, ts.defs_svg() + printed("lcp", STAT_W, STAT_H, body, animate), label), label
 
 
 def write(v):

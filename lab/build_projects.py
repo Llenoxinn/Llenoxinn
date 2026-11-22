@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Draw one card per project and fill the README's PROJECTS block.
 
-Each card has an original pixel icon of what the project does, two short lines
-and an ink terminal strip that types the stack. Cards are separate images, two
+Each card is a torn lab sheet: an original pixel icon of what the project does,
+its name, one line and the stack as notched chips. It prints in row by row and
+the icon idles on a two-frame bounce. Cards are separate images, two
 to a row on wide screens and one on phones. Private repositories are labelled
 rather than linked to a page that would 404.
 
@@ -10,11 +11,16 @@ rather than linked to a page that would 404.
 """
 import math
 
-from notebook import (ASSETS, BRAND, SHEET, STRIP, Typesetter, card, fx, pixels, replace_block, scene, strip,
-                      svg_doc, text_width)
+from notebook import (ASSETS, BRAND, PAPER, SHADE, Typesetter, blink, box, fit, hop, mark, pixels, print_clip,
+                      replace_block, scene, sheet, step_in, svg_doc, text_width)
 
 GITHUB = "https://github.com/Llenoxinn"
 PROJECTS = [
+    dict(name="PlacebAIStudio", repo=None, live="https://placebeat-studio.vercel.app", art="placebo",
+         line="Every effect works. None touch your audio.",
+         detail="MALFUNCTION 2026 champion, Rage Quit Award · team Dexter's Fun Club",
+         stack=[("react", "React"), ("ts", "TypeScript"), ("vite", "Vite"), ("vitest", "Vitest"),
+                ("matter", "Matter.js"), ("xstate", "XState"), ("claude", "Claude API")]),
     dict(name="dfCTF", repo="dfCTF", art="flag",
          line="Solve flags. Climb the weekly board.", detail="Seven categories · first blood · timed events",
          stack=[("ts", "TypeScript"), ("next", "Next.js"), ("react", "React"), ("postgres", "PostgreSQL"),
@@ -46,7 +52,7 @@ PROJECTS = [
          stack=[("ts", "TypeScript"), ("react", "React"), ("vite", "Vite"), ("tailwind", "Tailwind CSS"),
                 ("d3", "D3.js"), ("zustand", "Zustand")]),
 ]
-CARD_W, CARD_H = 376, 106
+CARD_W, CARD_H = 376, 104
 GRID, PIXEL = 20, 2.8             # a 20 × 20 pixel drawing in a 56 px ink square
 
 
@@ -195,93 +201,101 @@ def art_laude():
     return cells
 
 
-ARTS = dict(flag=art_flag, laude=art_laude, sylvi=art_sylvi, collatz=art_collatz, helix=art_helix, lissajous=art_lissajous, tree=art_tree,
+def art_placebo():
+    """A placebo capsule over a sound wave: half paper, half neon, tilted."""
+    cells = {}
+    for i in range(20):
+        y = round(15 + 2.2 * math.sin(i / 19 * 4 * math.pi))
+        cells[(i, y)] = "L"
+        cells[(i, y + 1)] = "L"
+    for x in range(1, 19):
+        for y in range(1, 13):
+            u, v = (x - 9.5) * 0.8 + (y - 7) * 0.6, -(x - 9.5) * 0.6 + (y - 7) * 0.8
+            if (abs(u) <= 5 and abs(v) <= 2.8) or math.hypot(abs(u) - 5, v) <= 2.8:
+                cells[(x, y)] = "P" if u < 0 else "N"
+    for x, y in ((6, 6), (7, 5)):
+        cells[(x, y)] = "L"          # a glint on the paper half
+    return cells
+
+
+ARTS = dict(placebo=art_placebo, flag=art_flag, laude=art_laude, sylvi=art_sylvi, collatz=art_collatz, helix=art_helix, lissajous=art_lissajous, tree=art_tree,
             orbit=art_orbit)
 
 
-LOCK = [".XXXX.", "XX..XX", "XX..XX", "XXXXXX", "XXX.XX", "XXX.XX", "XXXXXX"]
-
-
-def icon(project, x, y, delay):
-    """The pixel drawing on its ink square. Rows appear top to bottom on load; after that
-    a faint scan line passes over it every few seconds. delay=None draws it still."""
+def icon(project, x, y):
+    """The project's pixel drawing, in paper, lavender and neon, for an ink box."""
     colours = dict(P=BRAND["paper"], L=BRAND["lavender"], N=BRAND["neon"], D=BRAND["deep"])
     cells = ARTS[project["art"]]()
-    size = GRID * PIXEL
-    rows = []
-    for r in range(GRID):
-        paths = []
-        for key, colour in colours.items():
-            d = "".join(f"M{x + c * PIXEL:.1f} {y + r * PIXEL:.1f}h{PIXEL}v{PIXEL}h-{PIXEL}Z"
-                        for c in range(GRID) if cells.get((c, r)) == key)
-            if d:
-                paths.append(f'<path d="{d}" fill="{colour}"/>')
-        if paths:
-            rows.append(f'<g opacity="1">{fx(None if delay is None else delay + r * 0.025, 0.12)}{"".join(paths)}</g>')
-    scan = ""
-    if delay is not None:
-        scan = (f'<clipPath id="iconclip"><rect x="{x}" y="{y}" width="{size}" height="{size}" rx="8"/></clipPath>'
-                f'<rect clip-path="url(#iconclip)" x="{x}" y="{y - 6}" width="{size}" height="6" fill="{BRAND["lavender"]}" opacity="0.35">'
-                f'<animate attributeName="y" values="{y - 6};{y - 6};{y + size}" keyTimes="0;0.7;1" dur="5s" '
-                f'begin="1.5s" repeatCount="indefinite"/></rect>')
-    return (f'<rect x="{x}" y="{y}" width="{size}" height="{size}" rx="8" fill="{BRAND["ink"]}"/>'
-            f'<g shape-rendering="crispEdges">{"".join(rows)}</g>{scan}')
+    rows = ["".join(cells.get((c, r), ".") for c in range(GRID)) for r in range(GRID)]
+    return pixels(rows, x, y, PIXEL, colours)
 
 
-def public_pill(ts, theme, right, y):
-    """A sleek Notion status pill with a green dot and button-in-button trailing arrow."""
-    s = SHEET[theme]
-    w = 68
+def chips(ts, theme, stack, x, y, room, delay):
+    """Stack as notched chips: an icon where the lab has one, else the name. Overflow folds into +N."""
+    from icons import ICONS
+    s = PAPER[theme]
+    out = []
+    for k, name in enumerate(stack):
+        if name.lower() in ICONS:
+            w, inner = 22, mark(name, x + 4, y + 4, 14, s["text"])
+        else:
+            w = text_width(name, "body-bold", 11) + 14
+            inner = ts.text(name, "body-bold", 11, x + 7, y + 15, s["text"])[0]
+        rest = len(stack) - k - 1
+        if x + w + (30 if rest else 0) > room:
+            more = f"+{len(stack) - k}"
+            w = text_width(more, "body-bold", 12) + 14
+            out.append(f'<g>{step_in(delay(k))}{box(x, y, w, 22, s["soft"], 2)}'
+                       f'{ts.text(more, "body-bold", 12, x + 7, y + 15.5, s["muted"])[0]}</g>')
+            break
+        out.append(f'<g>{step_in(delay(k))}{box(x, y, w, 22, s["chip"], 2, s["line"])}{inner}</g>')
+        x += w + 4
+    return "".join(out)
+
+
+def status(ts, theme, p, right, y, animate):
+    """Top-right tag: where the code lives. A lit LED means you can open it."""
+    s = PAPER[theme]
+    words = ("public" if p["repo"] else "private") + (" · live" if p.get("live") else "")
+    w = text_width(words, "pixel", 12) + 28
     x = right - w
-    body = (f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="20" rx="10" fill="{s["soft"]}" stroke="{s["inner_edge"]}" stroke-width="1"/>'
-            f'<circle cx="{x + 8:.1f}" cy="{y + 10}" r="3" fill="#3fb950"/>'
-            + ts.text("repo", "code", 11, x + 16, y + 14, s["text"])[0]
-            + f'<circle cx="{x + w - 10:.1f}" cy="{y + 10}" r="6.5" fill="{s["sheet"]}"/>'
-            + ts.text("↗", "code", 9.5, x + w - 10, y + 13.5, s["text"], anchor="middle")[0])
-    return body, x
+    lit = bool(p["repo"] or p.get("live"))
+    led = (f'<rect x="{x + 7}" y="{y + 7}" width="6" height="6" fill="{s["led"] if lit else s["muted"]}">'
+           f'{blink(1.4, 1.0, 0.7) if animate and lit else ""}</rect>')
+    return (box(x, y, w, 20, s["soft"], 2) + led
+            + ts.text(words, "pixel", 12, x + 19, y + 14.5, s["text"])[0]), x
 
 
-def private_pill(ts, theme, right, y):
-    """A soft pill with a pixel lock, matching the Notion status aesthetic."""
-    s = SHEET[theme]
-    tw = text_width("private", "code", 11)
-    w = 8 + 9 + 6 + tw + 9
-    x = right - w
-    return (f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="20" rx="10" fill="{s["soft"]}" stroke="{s["inner_edge"]}" stroke-width="1"/>'
-            + pixels(LOCK, x + 8, y + 5, 1.5, {"X": s["text"]})
-            + ts.text("private", "code", 11, x + 8 + 9 + 6, y + 14, s["text"])[0]), x
-
-
-def repo_url(repo):
-    return f"https://github.com/{repo}" if "/" in repo else f"{GITHUB}/{repo}"
+def link(p):
+    if p["repo"]:
+        return f"https://github.com/{p['repo']}" if "/" in p["repo"] else f"{GITHUB}/{p['repo']}"
+    return p.get("live")
 
 
 def project_card(p, theme, animate=True):
-    s = SHEET[theme]
+    s = PAPER[theme]
     ts = Typesetter("p")
-    body = [card(theme, CARD_W, CARD_H, radius=10), icon(p, 14, 10, 0.05 if animate else None)]
-    status = "public" if p["repo"] else "private"
-    if p["repo"]:
-        pill, px = public_pill(ts, theme, CARD_W - 12, 12)
-        body.append(pill)
-        room = px - 8 - 82
-    else:
-        pill, px = private_pill(ts, theme, CARD_W - 12, 12)
-        body.append(pill)
-        room = px - 8 - 82
-    size = 17.5
-    while text_width(p["name"], "label", size) > room:
-        size -= 1
-    body.append(f'<g opacity="1">{fx(0.06 if animate else None)}{ts.text(p["name"], "label", size, 80, 36, s["text"])[0]}</g>')
-    body.append(f'<g opacity="1">{fx(0.10 if animate else None)}{ts.text(p["line"], "text", 13.5, 80, 57, s["muted"])[0]}</g>')
-    names = "  ".join(short for short, _ in p["stack"])
-    svg, _ = strip(ts, CARD_W, CARD_H - STRIP, [("$ ", BRAND["neon"]), (names, BRAND["paper"])],
-                   start=0.20 if animate else None, rate=0.035, radius=10)
-    body.append(svg)
-    owner = f", with {p['repo'].split('/')[0]}" if p["repo"] and "/" in p["repo"] else ""
-    alt = (f"{p['name']}, {status} repository{owner}: {p['line']} {p['detail']}. "
+    body = [sheet(theme, CARD_W, CARD_H, p["name"])]
+    art = icon(p, 16, 18)
+    body.append(box(14, 16, 60, 60, BRAND["ink"], 3)
+                + (f'<g>{hop(PIXEL, 1.6, 1.2)}{art}</g>' if animate else art))
+    pill, px = status(ts, theme, p, CARD_W - SHADE - 12, 14, animate)
+    body.append(pill)
+    size = fit(p["name"], "title", 18, px - 8 - 88)
+    body.append(ts.text(p["name"], "title", size, 88, 30, s["text"])[0])
+    body.append(ts.text(p["line"], "body", 13, 88, 52, s["muted"])[0])
+    at = (lambda k: 0.7 + k * 0.07) if animate else (lambda k: None)
+    body.append(chips(ts, theme, [full for _, full in p["stack"]], 88, 64, CARD_W - SHADE - 12, at))
+    where = (f"{'public' if p['repo'] else 'private'} repository"
+             + (f", with {p['repo'].split('/')[0]}" if p["repo"] and "/" in p["repo"] else "")
+             + (", live demo" if p.get("live") else ""))
+    alt = (f"{p['name']}, {where}: {p['line']} {p['detail']}. "
            f"Built with {', '.join(full for _, full in p['stack'])}.")
-    return svg_doc(CARD_W, CARD_H, ts.defs_svg() + "".join(body), alt), alt
+    inner = "".join(body)
+    if animate:
+        defs, clip = print_clip(f"pc{slug(p['name'])}", CARD_W, CARD_H)
+        inner = f'<defs>{defs}</defs><g{clip}>{inner}</g>'
+    return svg_doc(CARD_W, CARD_H, ts.defs_svg() + inner, alt), alt
 
 
 def slug(name):
@@ -293,7 +307,7 @@ def block():
     for p in PROJECTS:
         _, alt = project_card(p, "light")
         pic = scene(f"projects/{slug(p['name'])}", alt, CARD_W, CARD_H)
-        cells.append(f'<a href="{repo_url(p["repo"])}">{pic}</a>' if p["repo"] else pic)
+        cells.append(f'<a href="{link(p)}">{pic}</a>' if link(p) else pic)
     return '<p align="center">\n' + "\n".join(cells) + "\n</p>"
 
 
@@ -302,7 +316,7 @@ if __name__ == "__main__":
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("*.svg"):
         old.unlink()
-    for theme in SHEET:
+    for theme in PAPER:
         for p in PROJECTS:
             (out / f"{slug(p['name'])}-{theme}.svg").write_text(project_card(p, theme)[0], encoding="utf-8")
             (out / f"{slug(p['name'])}-still-{theme}.svg").write_text(project_card(p, theme, False)[0], encoding="utf-8")

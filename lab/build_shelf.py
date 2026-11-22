@@ -3,13 +3,14 @@
 
 Each tool is its own small image, so the row wraps on narrow screens. Names live
 in alt text and hover titles; there are no skill levels or percentages. Tiles
-fade in one after another as they come into view.
+are notched pixel squares that cut in one after another, without a fade.
 
     python lab/build_shelf.py
 """
 import re
 
-from notebook import ASSETS, BRAND, SHEET, Typesetter, fade, mark, replace_block, svg_doc, text_width, themed
+from notebook import (ASSETS, BRAND, PAPER, Typesetter, box, mark, replace_block, step_in, svg_doc,
+                      text_width, themed)
 
 OUT = ASSETS / "stack"
 TILE = 48
@@ -32,28 +33,21 @@ def slug(name):
 
 
 def tile(name, theme, n):
-    s = SHEET[theme]
-    delay = min(n * 0.008, 0.25)
-    body = (f'<g opacity="1">{fade(delay, 0.2)}'
-            f'<rect x="0.75" y="0.75" width="{TILE - 1.5}" height="{TILE - 1.5}" rx="8" fill="{s["sheet"]}" '
-            f'stroke="{s["edge"]}" stroke-width="1.2"/>'
-            f'<rect x="2.5" y="2.5" width="{TILE - 5}" height="{TILE - 5}" rx="6" fill="none" '
-            f'stroke="{s["inner_edge"]}" stroke-width="1" opacity="0.6"/>'
-            + mark(name, 12, 12, 24, s["text"]) + "</g>")
+    """A notched pixel tile with the tool's mark; it cuts in on its turn, left to right."""
+    s = PAPER[theme]
+    body = (f'<g>{step_in(min(n * 0.02, 0.9))}' + box(4, 4, TILE - 5, TILE - 5, s["shadow"], 3)
+            + box(1, 1, TILE - 5, TILE - 5, s["sheet"], 3, s["line"])
+            + mark(name, 11, 11, 22, s["text"]) + "</g>")
     return svg_doc(TILE, TILE, body, name)
 
 
 def group_tile(group, theme, n):
-    """A mono folder label that opens each group: lang/, web/ …"""
+    """An ink label that opens each group of tools."""
     ts = Typesetter("g")
-    s = SHEET[theme]
-    label = f"{group}/"
-    w = round(text_width(label, "code-bold", 12.5)) + 28
-    delay = min(n * 0.008, 0.25)
-    body = (f'<g opacity="1">{fade(delay, 0.2)}'
-            f'<rect x="0.75" y="0.75" width="{w - 1.5}" height="{TILE - 1.5}" rx="8" fill="{BRAND["ink"]}" stroke="{s["edge"]}" stroke-width="1"/>'
-            f'<rect x="2.5" y="2.5" width="{w - 5}" height="{TILE - 5}" rx="6" fill="none" stroke="{BRAND["lavender"]}" stroke-width="1" opacity="0.3"/>'
-            + ts.text(label, "code-bold", 12.5, 14, 29, BRAND["paper"])[0] + "</g>")
+    label = GROUP[group].upper()
+    w = round(text_width(label, "body-bold", 11.5, 1)) + 28
+    body = (f'<g>{step_in(min(n * 0.02, 0.9))}' + box(1, 1, w - 5, TILE - 5, BRAND["ink"], 3)
+            + ts.text(label, "body-bold", 11.5, 13, 27.5, BRAND["paper"], tracking=1)[0] + "</g>")
     return svg_doc(w, TILE, ts.defs_svg() + body, GROUP[group]), w
 
 
@@ -85,7 +79,7 @@ if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("*.svg"):
         old.unlink()
-    for theme in SHEET:
+    for theme in PAPER:
         for kind, name, n in items():
             if kind == "group":
                 (OUT / f"group-{name}-{theme}.svg").write_text(group_tile(name, theme, n)[0], encoding="utf-8")
