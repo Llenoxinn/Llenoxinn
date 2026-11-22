@@ -9,7 +9,7 @@ are notched pixel squares that cut in one after another, without a fade.
 """
 import re
 
-from notebook import (ASSETS, BRAND, PAPER, Typesetter, box, mark, replace_block, step_in, svg_doc,
+from notebook import (ASSETS, BRAND, PAPER, Typesetter, box, mark, nudge_in, replace_block, svg_doc,
                       text_width, themed)
 
 OUT = ASSETS / "stack"
@@ -34,9 +34,9 @@ def slug(name):
 
 
 def tile(name, theme, n):
-    """A notched pixel tile with the tool's mark; it cuts in on its turn, left to right."""
+    """A notched pixel tile with the tool's mark; ripples in left to right with a crisp 3px settle."""
     s = PAPER[theme]
-    body = (f'<g>{step_in(min(n * 0.02, 0.9))}' + box(4, 4, TILE - 5, TILE - 5, s["shadow"], 3)
+    body = (f'<g>{nudge_in(min(n * 0.018, 0.72), 3)}' + box(4, 4, TILE - 5, TILE - 5, s["shadow"], 3)
             + box(1, 1, TILE - 5, TILE - 5, s["sheet"], 3, s["line"])
             + mark(name, 11, 11, 22, s["text"]) + "</g>")
     return svg_doc(TILE, TILE, body, name)
@@ -47,7 +47,7 @@ def group_tile(group, theme, n):
     ts = Typesetter("g")
     label = GROUP[group].upper()
     w = round(text_width(label, "body-bold", 11.5, 1)) + 28
-    body = (f'<g>{step_in(min(n * 0.02, 0.9))}' + box(1, 1, w - 5, TILE - 5, BRAND["ink"], 3)
+    body = (f'<g>{nudge_in(min(n * 0.018, 0.72), 3)}' + box(1, 1, w - 5, TILE - 5, BRAND["ink"], 3)
             + ts.text(label, "body-bold", 11.5, 13, 27.5, BRAND["paper"], tracking=1)[0] + "</g>")
     return svg_doc(w, TILE, ts.defs_svg() + body, GROUP[group]), w
 
