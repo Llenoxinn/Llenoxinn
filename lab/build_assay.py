@@ -9,8 +9,8 @@ public API, so you update that file after solving).
 """
 import json
 
-from notebook import (ASSETS, PAPER, ROOT, SHADE, STAT_H, STAT_W, THEMES, Typesetter, blink, esc, foot, printed,
-                      reading, replace_block, scene, stamp, step_in, svg_doc)
+from notebook import (ASSETS, PAPER, ROOT, SHADE, STAT_H, STAT_W, THEMES, Typesetter, box, esc, foot, printed,
+                      reading, replace_block, scene, sparkle, stamp, step_in, svg_doc)
 
 DATA = ROOT / "lab" / "data" / "picoctf.json"
 # category -> (dark, light); the light set keeps 3:1 against the paper sheet
@@ -40,7 +40,8 @@ def tally(d):
 
 
 def plate(d, theme, animate=True):
-    """picoGym card: flags captured ticks up, then a 96-well plate fills in order, one well per flag."""
+    """picoGym card: flags captured ticks up, then a 96-well plate fills in order inside a recessed
+    assay tray, scanned top-to-bottom by a microplate reader bar that highlights the newest flag."""
     s = PAPER[theme]
     ts = Typesetter("a")
     tone = 0 if theme == "dark" else 1
@@ -49,28 +50,52 @@ def plate(d, theme, animate=True):
     extra = max(0, len(wells) - ROWS * COLS)
     wells = wells[:ROWS * COLS]
     body = reading(ts, theme, "pico", "PICOGYM", f"@{d.get('username')}", total, "flags", animate)
-    pitch, size = 8.4, 7
+    body.append(box(11, 82, 108, 71, s["recess"], 2, s["line"]))
+    px0, py0, dx, dy, wsize, hsize = 16.5, 88.0, 8.2, 7.6, 6.8, 6.2
     cells = []
     for i in range(ROWS * COLS):
         row, col = divmod(i, COLS)
-        x, y = 14 + pitch * col, 88 + pitch * row
+        x, y = px0 + dx * col, py0 + dy * row
         filled = i < len(wells)
-        motion = step_in(0.75 + i * 0.008) if animate and filled else ""
-        if animate and filled and i == len(wells) - 1:   # the newest flag blinks
-            motion += blink(1.2, 2.5, low=0.35)
-        cells.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size}" height="{size}" '
+        motion = step_in(0.38 + i * 0.006) if animate and filled else ""
+        cells.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{wsize}" height="{hsize}" '
                      f'fill="{CATS[wells[i]][tone] if filled else s["well"]}">{motion}</rect>')
+    if animate and wells:
+        # Microplate reader bar sweeps top-to-bottom across the 8 rows every 6s (staggered 3rd card)
+        plate_w = (COLS - 1) * dx + wsize
+        ys = [f"{py0 + r * dy:.1f}" for r in range(ROWS)]
+        travel = 0.24
+        kt = [f"{travel * r / ROWS:.4f}" for r in range(ROWS)] + [f"{travel:.4f}", "1"]
+        kt_s = ";".join(kt)
+        op_s = ";".join(["0.30"] * ROWS + ["0", "0"])
+        cells.append(
+            f'<rect x="{px0:.1f}" y="{ys[0]}" width="{plate_w:.1f}" height="{hsize}" fill="{s["text"]}" opacity="0">'
+            f'<animate attributeName="y" values="{";".join(ys)};{ys[-1]};{ys[0]}" keyTimes="{kt_s}" '
+            f'calcMode="discrete" dur="6.0s" begin="4.2s" repeatCount="indefinite"/>'
+            f'<animate attributeName="opacity" values="{op_s}" keyTimes="{kt_s}" calcMode="discrete" '
+            f'dur="6.0s" begin="4.2s" repeatCount="indefinite"/></rect>'
+        )
+        # Newest captured flag well flashes + sparkles right as the reader row crosses it
+        lr, lc = divmod(len(wells) - 1, COLS)
+        wx, wy = px0 + dx * lc, py0 + dy * lr
+        hit = travel * lr / ROWS
+        cells.append(
+            f'<rect x="{wx:.1f}" y="{wy:.1f}" width="{wsize}" height="{hsize}" fill="{s["text"]}" opacity="0">'
+            f'<animate attributeName="opacity" values="0;0.85;0" keyTimes="0;{hit:.4f};{hit + 0.08:.4f}" '
+            f'calcMode="discrete" dur="6.0s" begin="4.2s" repeatCount="indefinite"/></rect>'
+            + sparkle(wx + 2, wy - 2, 2, s["text"], 6.0, 4.2 + hit * 6.0 - 0.25)
+        )
     body.append(f'<g shape-rendering="crispEdges">{"".join(cells)}</g>')
-    lx, right = 14 + pitch * COLS + 12, STAT_W - SHADE - 14
+    lx, right = 127, STAT_W - SHADE - 14
     for k, cat in enumerate(order[:3]):
-        y = 97 + k * 20
-        body.append(f'<g>{step_in(1.3 + k * 0.1 if animate else None)}'
+        y = 96 + k * 19
+        body.append(f'<g>{step_in(0.62 + k * 0.08 if animate else None)}'
                     f'<rect x="{lx}" y="{y - 8}" width="8" height="8" fill="{CATS[cat][tone]}"/>'
-                    + ts.text(SHORT[cat], "body", 12.5, lx + 13, y, s["text"])[0]
-                    + ts.text(str(sum(cats[cat].values())), "body-bold", 12.5, right, y, s["text"], anchor="end")[0]
+                    + ts.text(SHORT[cat], "body", 12, lx + 13, y, s["text"])[0]
+                    + ts.text(str(sum(cats[cat].values())), "body-bold", 12, right, y, s["text"], anchor="end")[0]
                     + "</g>")
     if len(order) > 3:
-        body.append(ts.text(f"+ {len(order) - 3} more", "body", 12.5, lx + 13, 157, s["muted"])[0])
+        body.append(ts.text(f"+ {len(order) - 3} more", "body", 11.5, lx + 13, 152, s["muted"])[0])
     split = ", ".join(f"{by_diff[k]} {k}" for k in DIFF if by_diff[k]) or "no flags yet"
     body.append(foot(ts, theme, split + (f", {extra} more off the plate" if extra else "")))
     label = (f"picoGym progress for @{d.get('username')}: {total} flags captured ({split}). "
