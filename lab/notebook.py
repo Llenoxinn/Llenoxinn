@@ -630,49 +630,90 @@ def step_in(delay):
             f'dur="{t:.2f}s" fill="freeze"/>')
 
 
-def print_clip(uid, w, h, start=0.0, steps=10, dur=0.6):
-    """A clip that uncovers the card top to bottom in `steps` hard bands, like a sheet
-    feeding out of a printer. Returns (defs, attribute for the group)."""
-    total = start + dur
-    vals = [0] + [h * i / steps for i in range(steps + 1)]
-    times = [0] + [(start + dur * i / steps) / total for i in range(steps + 1)]
-    anim = (f'<animate attributeName="height" values="{";".join(f"{v:.1f}" for v in vals)}" '
-            f'keyTimes="{";".join(f"{t:.4f}" for t in times)}" calcMode="discrete" dur="{total:.2f}s" fill="freeze"/>')
-    return (f'<clipPath id="{uid}"><rect x="0" y="0" width="{w}" height="{h}">{anim}</rect></clipPath>',
-            f' clip-path="url(#{uid})"')
+BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 
 
-def flip(a, b, period=1.2, begin=0.0):
-    """Two sprite frames swapping on a beat. Frame a is the still."""
-    def anim(vals):
-        return (f'<animate attributeName="opacity" values="{vals}" keyTimes="0;0.5" calcMode="discrete" '
+def materialize(uid, w, h, start=0.0, dur=0.7, cell=None):
+    """The sheet resolves out of pixel noise: an ordered (Bayer) dither that also sweeps
+    downward, so it reads as a retro screen drawing the card in. Each uid shifts the dither
+    matrix, so neighbouring cards never resolve in the same pattern.
+    Returns (defs, attribute for the group). The finished card is the base state."""
+    import zlib
+    cell = cell or (8 if w * h < 60000 else 12)
+    seed = zlib.crc32(uid.encode())
+    ox, oy = seed % 4, (seed // 4) % 4
+    cols, rows = math.ceil(w / cell), math.ceil(h / cell)
+    groups = {}
+    for r in range(rows):
+        band = round(7 * r / max(rows - 1, 1))
+        for c in range(cols):
+            order = BAYER[(r + oy) % 4][(c + ox) % 4] + band
+            groups.setdefault(order, []).append(f"M{c * cell} {r * cell}h{cell}v{cell}h-{cell}Z")
+    last = max(groups)
+    total = start + dur + 0.01
+    paths = []
+    for order, cells in sorted(groups.items()):
+        t = (start + dur * order / last) / total
+        paths.append(f'<path d="{"".join(cells)}" fill="#000" opacity="0"><animate attributeName="opacity" '
+                     f'values="1;0" keyTimes="0;{t:.4f}" calcMode="discrete" dur="{total:.2f}s" fill="freeze"/></path>')
+    return (f'<mask id="{uid}" maskUnits="userSpaceOnUse" x="0" y="0" width="{w}" height="{h}">'
+            f'<rect width="{w}" height="{h}" fill="#fff"/>{"".join(paths)}</mask>',
+            f' mask="url(#{uid})"')
+
+
+def print_clip(uid, w, h, start=0.0, steps=None, dur=0.7):
+    """Every sheet's entrance; kept under its old name for the generators that call it."""
+    return materialize(uid, w, h, start, dur)
+
+
+def flip(a, b, period=1.2, begin=0.0, rhythm="01"):
+    """Two sprite frames. `rhythm` spells which frame shows in each equal step of the
+    period ("0" = a, "1" = b), so a sprite can act: wave three times and rest, crackle
+    unevenly, glint once in a while. Frame a is the still."""
+    n = len(rhythm)
+    times = ";".join(f"{i / n:.4f}" for i in range(n))
+
+    def anim(on):
+        vals = ";".join("1" if (ch == "1") == on else "0" for ch in rhythm)
+        return (f'<animate attributeName="opacity" values="{vals}" keyTimes="{times}" calcMode="discrete" '
                 f'dur="{period}s" begin="{begin}s" repeatCount="indefinite"/>')
-    return f'<g>{anim("1;0")}{a}</g><g opacity="0">{anim("0;1")}{b}</g>'
+    return f'<g>{anim(False)}{a}</g><g opacity="0">{anim(True)}{b}</g>'
 
 
-def blink(period=1.0, begin=0.0, on=0.5, low=0):
-    return (f'<animate attributeName="opacity" values="1;{low}" keyTimes="0;{on}" calcMode="discrete" '
+def blink(period=1.0, begin=0.0, on=0.5, low=0, rhythm=None):
+    """An LED. Without a rhythm it is on for `on` of the period; with one, "1" is lit and
+    "0" is dim for each equal step, for flickers that do not feel metronomic."""
+    if rhythm:
+        n = len(rhythm)
+        vals = ";".join("1" if ch == "1" else str(low) for ch in rhythm)
+        times = ";".join(f"{i / n:.4f}" for i in range(n))
+    else:
+        vals, times = f"1;{low}", f"0;{on}"
+    return (f'<animate attributeName="opacity" values="{vals}" keyTimes="{times}" calcMode="discrete" '
             f'dur="{period}s" begin="{begin}s" repeatCount="indefinite"/>')
 
 
-def hop(dy=2, period=1.2, begin=0.0):
-    """A one-notch idle bounce, two frames, like a sprite breathing."""
-    return (f'<animateTransform attributeName="transform" type="translate" values="0 0;0 {-dy}" keyTimes="0;0.5" '
-            f'calcMode="discrete" dur="{period}s" begin="{begin}s" repeatCount="indefinite"/>')
 
-
-def count_up(ts, value, face, size, x, y, fill, start=None, frames=8, dur=0.64, anchor="start"):
-    """A number that ticks up through `frames` values, then holds. start=None: just the number."""
-    final = ts.text(f"{value:,}", face, size, x, y, fill, anchor=anchor)[0]
+def count_up(ts, value, face, size, x, y, fill, start=None, frames=10, dur=0.7, anchor="start", unit=None):
+    """A number that races up and settles (ease-out over `frames` ticks), then holds.
+    unit=(text, face, size, fill, dy) is set 8 px after each frame's number, so it travels
+    with the count instead of waiting at the final width. start=None: just the number."""
+    def frame(n):
+        out = ts.text(f"{n:,}", face, size, x, y, fill, anchor=anchor)[0]
+        if unit:
+            text, uface, usize, ufill, dy = unit
+            out += ts.text(text, uface, usize, x + text_width(f"{n:,}", face, size) + 8, y + dy, ufill)[0]
+        return out
+    final = frame(value)
     if start is None or not value:
         return final
     total = start + dur + 0.01
     out = []
     marks = [0] + [start + dur * i / frames for i in range(1, frames)]
     for i, t0 in enumerate(marks):
-        n = round(value * i / frames)
+        n = round(value * (1 - (1 - i / frames) ** 3))
         t1 = marks[i + 1] if i + 1 < len(marks) else start + dur
-        g = ts.text(f"{n:,}", face, size, x, y, fill, anchor=anchor)[0]
+        g = frame(n)
         out.append(f'<g opacity="0"><animate attributeName="opacity" values="0;1;0" '
                    f'keyTimes="0;{t0 / total:.4f};{t1 / total:.4f}" calcMode="discrete" dur="{total:.2f}s" '
                    f'fill="freeze"/>{g}</g>')
@@ -704,12 +745,11 @@ def reading(ts, theme, seed, source, handle, value, unit, animate):
     right = STAT_W - SHADE - 14
     out = [sheet(theme, STAT_W, STAT_H, seed),
            f'<rect x="14" y="17" width="8" height="8" fill="{s["led"]}" shape-rendering="crispEdges">'
-           f'{blink(1.2, 0.8, 0.6) if animate else ""}</rect>',
+           f'{blink(3.6, 1.5, rhythm="111111101101") if animate else ""}</rect>',
            ts.text(source, "body-bold", 13, 29, 25.5, s["text"], tracking=1.2)[0],
            ts.text(handle, "body", 12, right, 25, s["muted"], anchor="end")[0],
-           count_up(ts, value, "title", 36, 14, 70, s["text"], 0.55 if animate else None)]
-    nw = text_width(f"{value:,}", "title", 36)
-    out.append(ts.text(unit, "body", 13.5, 14 + nw + 8, 69, s["muted"])[0])
+           count_up(ts, value, "title", 36, 14, 70, s["text"], 0.55 if animate else None,
+                    unit=(unit, "body", 13.5, s["muted"], -1))]
     return out
 
 
@@ -726,3 +766,39 @@ def printed(uid, w, h, body, animate):
         return inner
     defs, clip = print_clip(uid, w, h)
     return f"<defs>{defs}</defs><g{clip}>{inner}</g>"
+
+
+COLUMN = 760   # the README's content column: two 376 cards, or three 252 cards, with their gaps
+
+
+def wide_scene(stem, narrow, alt, folder="assets", width=COLUMN):
+    """<picture> for a full-width animated image with a phone layout: still or moving, by theme."""
+    def src(media, name):
+        return f'<source media="{media}" srcset="{folder}/{name}.svg">'
+    phone, still, dark = "(max-width: 600px)", "(prefers-reduced-motion: reduce)", "(prefers-color-scheme: dark)"
+    return ('<picture>'
+            + src(f"{phone} and {still} and {dark}", f"{narrow}-still-dark") + src(f"{phone} and {still}", f"{narrow}-still-light")
+            + src(f"{phone} and {dark}", f"{narrow}-dark") + src(phone, f"{narrow}-light")
+            + src(f"{still} and {dark}", f"{stem}-still-dark") + src(still, f"{stem}-still-light")
+            + src(dark, f"{stem}-dark")
+            + f'<img src="{folder}/{stem}-light.svg" alt="{esc(alt)}" width="{width}"></picture>')
+
+
+def wrap(text, face, size, width):
+    """Greedy line breaking by measured width."""
+    lines, line = [], ""
+    for word in text.split():
+        trial = f"{line} {word}".strip()
+        if line and text_width(trial, face, size) > width:
+            lines.append(line)
+            line = word
+        else:
+            line = trial
+    return lines + ([line] if line else [])
+
+
+def paragraph(ts, text, face, size, x, y, width, fill, leading=1.45):
+    """Wrapped lines from baseline y. Returns (svg, baseline of the last line)."""
+    lines = wrap(text, face, size, width)
+    out = "".join(ts.text(line, face, size, x, y + i * size * leading, fill)[0] for i, line in enumerate(lines))
+    return out, y + (len(lines) - 1) * size * leading

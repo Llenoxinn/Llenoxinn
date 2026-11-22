@@ -70,3 +70,29 @@ ENVELOPE = [r.replace('#', 'P') for r in [
 CHEVRON = [r.replace('#', 'P') for r in ['##.....', '###....', '.###...', '..###..', '.###...', '###....', '##.....']]
 TROPHY = ['NPPPPPPPPN', 'NPPPPPPPPN', 'P.PPPPPP.P', 'P.PPPPPP.P', '.PPPPPPPP.',
           '..PPPPPP..', '....LL....', '....LL....', '...LLLL...', '..PPPPPP..']
+# A silver medal on its ribbon, for a podium finish that is not first place.
+MEDAL = ['NN......NN', '.NN....NN.', '..NN..NN..', '...NNNN...', '....LL....', '..LLLLLL..', '.LPPPPPPL.',
+         'LPPPLLPPPL', 'LPPLPPLPPL', 'LPPPPLPPPL', 'LPPPLPPPPL', 'LPPLLLLPPL', '.LPPPPPPL.', '..LLLLLL..']
+# The trophy's second frame: a lavender glint runs down the cup.
+TROPHY_GLINT = ['NPPPPPPPPN', 'NPPLPPPPPN', 'P.PPLPPP.P', 'P.PPPLPP.P', '.PPPPPPPP.',
+                '..PPPPPP..', '....LL....', '....LL....', '...LLLL...', '..PPPPPP..']
+
+
+def _monitor(shift):
+    """A small lab monitor with a heartbeat trace; `shift` slides the trace for the second frame."""
+    w, h = 14, 9
+    beat = {0: 5, 1: 5, 2: 5, 3: 4, 4: 2, 5: 7, 6: 5, 7: 5, 8: 5, 9: 5, 10: 5, 11: 5}
+    rows = []
+    for y in range(h):
+        if y in (0, h - 1):
+            rows.append("L" * w)
+            continue
+        row = ["L"] + ["D"] * (w - 2) + ["L"]
+        for x in range(1, w - 1):
+            if beat[(x - 1 + shift) % 12] == y:
+                row[x] = "P"
+        rows.append("".join(row))
+    return rows + ["....LLLLLL....", "...LLLLLLLL..."]
+
+
+MONITOR_A, MONITOR_B = _monitor(0), _monitor(4)
