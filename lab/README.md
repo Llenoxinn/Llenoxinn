@@ -53,6 +53,4 @@ On PowerShell, set the token with `$env:GITHUB_TOKEN`. Keep credentials out of s
 
 `.github/workflows/lab-rounds.yml` runs hourly at :37 and on edits to `data/picoctf.json`. It redraws the three live cards, checks the profile and commits only when a number changed.
 
-`specimen_of_the_day.py`, `grow_culture.py`, `turntable.py`, `render3d/` and `vitals.py --telemetry` belong to the earlier lab section. They are no longer on the profile or in the workflow.
-
 See [font licenses](fonts/LICENSES.md).
