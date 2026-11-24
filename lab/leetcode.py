@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""LeetCode progress from the public GraphQL API. assets/leetcode-{dark,light}.svg
+"""LeetCode progress from the public GraphQL API. assets/leetcode-{dark,light}.svg and stills
 
 Reads solved counts by difficulty, the question bank's size, languages, active days
 and the latest accepted solutions, then fills the README's LEETCODE block. No token
@@ -13,8 +13,11 @@ import datetime as dt
 import json
 import urllib.request
 
-from notebook import (ASSETS, MANILA, PAPER, SHADE, STAT_H, STAT_W, THEMES, Typesetter, box, foot, printed, reading,
-                      replace_block, scene, stamp, step_in, svg_doc)
+from notebook import ASSETS, MANILA, THEMES, Typesetter, count_up, replace_block, scene, stamp, svg_doc
+from rts import HALF, INK, bar, defs, plaque, text
+
+PANEL_H = 236
+COLOURS = {"Easy": "#3fb950", "Medium": "#ffb02e", "Hard": "#ff5c6c"}
 
 HANDLE = "Acetylsphae"
 PROFILE = f"https://leetcode.com/u/{HANDLE}/"
@@ -63,60 +66,25 @@ def day(d):
 
 
 def leetcard(v, theme, animate=True):
-    """LeetCode card: problems solved ticks up, then proportional difficulty meters build inside
-    a recessed analyzer tray with a stepped VU light-wave sweeping across the lit segments."""
-    s = PAPER[theme]
+    """LeetCode production panel: problems solved, then one slot per difficulty filling to its share."""
     ts = Typesetter("lc")
     total = v["solved"].get("All", 0)
-    body = reading(ts, theme, "leet", "LEETCODE", f"@{HANDLE}", total, "solved", animate)
-    body.append(box(11, 82, 226, 71, s["recess"], 2, s["line"]))
-    right = 229
-    x0, count, seg = 78, 15, 8
+    body = [defs(), plaque(0, 0, HALF, PANEL_H),
+            text(ts, "LEETCODE", "head", 15, 16, 30, "url(#orange)", track=.1),
+            text(ts, f"@{HANDLE}", "semi", 14, HALF - 16, 30, INK["muted"], anchor="end"),
+            count_up(lambda n: text(ts, f"{n:,}", "num", 52, 16, 86, INK["text"]), total, 0.3 if animate else None),
+            text(ts, "SOLVED", "bold", 12, 80, 68, INK["muted"], track=.14),
+            text(ts, f"{v['active']} ACTIVE DAYS", "bold", 12, 80, 84, INK["gold"], track=.12)]
     for k, level in enumerate(DIFF):
-        y = 102 + k * 20
         got = v["solved"].get(level, 0)
-        colour = s[level.lower()]
-        body.append(ts.text(level, "body-bold", 12, 18, y, colour)[0])
-        body.append(ts.text(str(got), "body-bold", 12, right, y, s["text"], anchor="end")[0])
-        # Proportion of your solves so Easy/Medium/Hard read honestly against each other
-        if got and total:
-            lit = min(count - 1 if got < total else count, max(1, round(got * count / total)))
-        else:
-            lit = 0
-        blocks = []
-        for i in range(count):
-            on = i < lit
-            motion = step_in(0.38 + k * 0.10 + i * 0.022) if animate and on else ""
-            blocks.append(f'<rect x="{x0 + i * seg}" y="{y - 10}" width="{seg - 2}" height="11" '
-                          f'fill="{colour if on else s["well"]}">{motion}</rect>')
-        if animate and lit > 0:
-            # Stepped VU highlight wave racing across all lit blocks on this row, synced to the 6s card wave
-            step_t = 0.018
-            base_t = k * 0.12
-            xs = [str(x0 + i * seg) for i in range(lit)]
-            kt = [f"{base_t + i * step_t:.4f}" for i in range(lit)] + [f"{base_t + lit * step_t:.4f}", "1"]
-            if base_t > 0:
-                kt = ["0"] + kt
-                x_vals = [xs[0]] + xs + [xs[-1], xs[0]]
-                op_vals = ["0"] + ["0.75"] * lit + ["0", "0"]
-            else:
-                x_vals = xs + [xs[-1], xs[0]]
-                op_vals = ["0.75"] * lit + ["0", "0"]
-            kt_s = ";".join(kt)
-            blocks.append(
-                f'<rect x="{xs[0]}" y="{y - 10}" width="{seg - 2}" height="11" fill="{s["text"]}" opacity="0">'
-                f'<animate attributeName="x" values="{";".join(x_vals)}" keyTimes="{kt_s}" calcMode="discrete" '
-                f'dur="6.0s" begin="2.8s" repeatCount="indefinite"/>'
-                f'<animate attributeName="opacity" values="{";".join(op_vals)}" keyTimes="{kt_s}" '
-                f'calcMode="discrete" dur="6.0s" begin="2.8s" repeatCount="indefinite"/></rect>'
-            )
-        body.append(f'<g shape-rendering="crispEdges">{"".join(blocks)}</g>')
-    latest = f"latest: {v['recent'][0][0]}" if v["recent"] else f"{v['active']} active days"
-    body.append(foot(ts, theme, latest))
+        body.append(bar(ts, 16, 118 + k * 32, HALF - 32, got / total if total else 0, COLOURS[level], level, str(got),
+                        0.5 + k * .12 if animate else None))
+    latest = (f"LATEST: {v['recent'][0][0].upper()}, {day(v['recent'][0][1]).upper()}" if v["recent"] else "")
+    body.append(text(ts, latest[:58], "bold", 10.5, 16, PANEL_H - 14, INK["dim"], track=.08))
     split = ", ".join(f"{v['solved'].get(l, 0)} {l.lower()}" for l in DIFF)
-    label = (f"LeetCode @{HANDLE}: {total} problems solved ({split}) over {v['active']} active days"
-             + (f"; latest {v['recent'][0][0]}, {day(v['recent'][0][1])}." if v["recent"] else "."))
-    return svg_doc(STAT_W, STAT_H, ts.defs_svg() + printed("lcp", STAT_W, STAT_H, body, animate), label), label
+    label_ = (f"LeetCode @{HANDLE}: {total} problems solved ({split}) over {v['active']} active days"
+              + (f"; latest {v['recent'][0][0]}, {day(v['recent'][0][1])}." if v["recent"] else "."))
+    return svg_doc(HALF, PANEL_H, ts.defs_svg() + "".join(body), label_), label_
 
 
 def write(v):
@@ -124,7 +92,7 @@ def write(v):
     for theme, (svg, _) in svgs.items():
         (ASSETS / f"leetcode-{theme}.svg").write_text(svg, encoding="utf-8")
         (ASSETS / f"leetcode-still-{theme}.svg").write_text(leetcard(v, theme, False)[0], encoding="utf-8")
-    pic = scene("leetcode", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
+    pic = scene("leetcode", svgs["light"][1], HALF, PANEL_H, query="v=" + stamp(svgs["light"][0]))
     changed = replace_block("LEETCODE", f'<a href="{PROFILE}">{pic}</a>')
     print(f"leetcode: {v['solved'].get('All', 0)} solved, README {'updated' if changed else 'unchanged'}")
 

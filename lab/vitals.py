@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Draw the GitHub contributions card from the GitHub API and fill the CONTRIBUTIONS block.
+"""Draw the GitHub panel from the GitHub API and fill the CONTRIBUTIONS block.
+
+The panel is the readings section's main instrument: the year's contributions over a
+53-week phosphor heatmap, then four readouts (pull requests merged, issues closed,
+commits, streak), and underneath, the languages across public repositories and the
+week's rhythm. It comes wide and narrow (phones), each animated and still.
 
 Needs a token in GITHUB_TOKEN (the workflow's own token is enough; LAB_TOKEN adds
-private contributions). Writes assets/contributions-{theme}.svg and its stills.
+private contributions).
 
     GITHUB_TOKEN=... python lab/vitals.py
     python lab/vitals.py --from-json snapshot.json    # redraw from a saved API response
@@ -14,8 +19,8 @@ import os
 import sys
 import urllib.request
 
-from notebook import (ASSETS, PAPER, STAT_H, STAT_W, THEMES, USER, Typesetter, blink, box, foot, printed, reading,
-                      replace_block, scene, sparkle, stamp, step_in, svg_doc)
+from notebook import ASSETS, USER, Typesetter, count_up, mark, replace_block, stamp, step_in, svg_doc, wide_scene, write_pair
+from rts import INK, W, bar, defs, plaque, text, well
 
 PROFILE_REPO = USER                 # the profile repo itself: lab code, not your work
 QUERY = """
@@ -23,18 +28,21 @@ query($login: String!) {
   user(login: $login) {
     createdAt
     followers { totalCount }
+    pullRequests { totalCount }
+    mergedPullRequests: pullRequests(states: MERGED) { totalCount }
+    issues { totalCount }
+    closedIssues: issues(states: CLOSED) { totalCount }
     repositories(ownerAffiliations: OWNER, privacy: PUBLIC, isFork: false, first: 100,
                  orderBy: {field: PUSHED_AT, direction: DESC}) {
       totalCount
       nodes {
         name stargazerCount forkCount pushedAt
-        primaryLanguage { name color }
-        languages(first: 12, orderBy: {field: SIZE, direction: DESC}) { edges { size node { name color } } }
+        languages(first: 12, orderBy: {field: SIZE, direction: DESC}) { edges { size node { name } } }
       }
     }
     contributionsCollection {
       totalCommitContributions totalPullRequestContributions totalIssueContributions
-      restrictedContributionsCount
+      totalPullRequestReviewContributions restrictedContributionsCount
       contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } }
     }
   }
@@ -47,7 +55,7 @@ WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", 
 def fetch(token):
     body = json.dumps({"query": QUERY, "variables": {"login": USER}}).encode()
     req = urllib.request.Request("https://api.github.com/graphql", data=body, headers={
-        "Authorization": f"bearer {token}", "Content-Type": "application/json", "User-Agent": "specimen-lab"})
+        "Authorization": f"bearer {token}", "Content-Type": "application/json", "User-Agent": "dexterslab-lab"})
     with urllib.request.urlopen(req, timeout=60) as r:
         data = json.load(r)
     if data.get("errors"):
@@ -58,7 +66,6 @@ def fetch(token):
 def analyse(user):
     cc = user["contributionsCollection"]
     days = [d for w in cc["contributionCalendar"]["weeks"] for d in w["contributionDays"]]
-    weeks = [sum(d["contributionCount"] for d in w["contributionDays"]) for w in cc["contributionCalendar"]["weeks"]]
     counts = [d["contributionCount"] for d in days]
     longest = run = 0
     for c in counts:
@@ -72,96 +79,142 @@ def analyse(user):
     by_wd = [0] * 7
     for d in days:
         by_wd[dt.date.fromisoformat(d["date"]).weekday()] += d["contributionCount"]
-    busiest = max(days, key=lambda d: d["contributionCount"]) if days else None
     repos = [r for r in user["repositories"]["nodes"] if r["name"] != PROFILE_REPO]
+    langs = {}
+    for r in repos:
+        for e in r["languages"]["edges"]:
+            langs[e["node"]["name"]] = langs.get(e["node"]["name"], 0) + e["size"]
+    size = sum(langs.values()) or 1
+    top = sorted(langs.items(), key=lambda kv: -kv[1])[:5]
     return {
         "total": cc["contributionCalendar"]["totalContributions"],
-        "commits": cc["totalCommitContributions"], "prs": cc["totalPullRequestContributions"],
-        "issues": cc["totalIssueContributions"], "private": cc["restrictedContributionsCount"],
-        "weeks": weeks, "days": counts, "dates": [d["date"] for d in days], "current": current, "longest": longest,
-        "last7": sum(counts[-7:]),
-        "busiest": busiest, "weekday": WEEKDAYS[by_wd.index(max(by_wd))] if any(by_wd) else None,
-        "repos": repos, "repo_count": len(repos),
-        "stars": sum(r["stargazerCount"] for r in repos), "followers": user["followers"]["totalCount"],
+        "commits": cc["totalCommitContributions"], "reviews": cc["totalPullRequestReviewContributions"],
+        "prs": user["pullRequests"]["totalCount"], "merged": user["mergedPullRequests"]["totalCount"],
+        "issues": user["issues"]["totalCount"], "closed": user["closedIssues"]["totalCount"],
+        "days": counts, "dates": [d["date"] for d in days], "current": current, "longest": longest,
+        "last7": sum(counts[-7:]), "weekdays": by_wd,
+        "busiest": WEEKDAYS[by_wd.index(max(by_wd))] if any(by_wd) else None,
+        "langs": [(name, b / size) for name, b in top], "repo_count": len(repos),
+        "followers": user["followers"]["totalCount"],
     }
 
 
-# ------------------------------------------------------------------ contribution calendar
+# ------------------------------------------------------------------ the panel
 
-def calendar(v, theme, animate=True):
-    """Contributions card: the year's total ticks up, then the last 26 weeks step in along diagonals
-    inside a recessed radar screen, followed by a calm full-width stepped sweep synced to today's reticle."""
-    s = PAPER[theme]
-    ts = Typesetter("cal")
-    body = reading(ts, theme, "contrib", "GITHUB", f"@{USER}", v["total"], "in 12 months", animate)
-    body.append(box(11, 82, 226, 71, s["recess"], 2, s["line"]))
+def minimap(v, x, y, weeks, pitch, cell, animate):
+    """The last `weeks` weeks as a minimap: dark water for quiet days, brighter for busy ones.
+    Animated, the columns are revealed left to right like fog of war lifting."""
     dates = [dt.date.fromisoformat(d) for d in v["dates"]]
-    if dates:
-        first = dates[-1] - dt.timedelta(days=(dates[-1].weekday() + 1) % 7 + 25 * 7)   # Sunday, 26 weeks back
-        pitch, size = 8.4, 7
-        gx0, gy0 = 15.5, 89.0
-        active = sorted(c for c in v["days"] if c)        # quartiles of active days, as GitHub shades them
-        cuts = [active[len(active) * q // 4] for q in (1, 2, 3)] if active else []
-        diag = {}
-        for date, count in zip(dates, v["days"]):
-            if date < first:
-                continue
-            col, row = (date - first).days // 7, (date.weekday() + 1) % 7
-            level = 1 + sum(count > c for c in cuts) if count else 0
-            x, y = gx0 + col * pitch, gy0 + row * pitch
-            diag.setdefault(col + row, []).append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size}" height="{size}" '
-                                                  f'fill="{s["heat"][level]}"/>')
-        # cells land along diagonals, oldest corner first, right behind the moving print line
-        cells = [f'<g>{step_in(0.36 + d * 0.018 if animate else None)}{"".join(r)}</g>' for d, r in sorted(diag.items())]
-        if animate:
-            # full-width stepped radar scan bar + soft trailing column sweeping all 26 weeks every 6s
-            cols_n = 26
-            travel = 0.36
-            xs = [f"{gx0 + c * pitch:.1f}" for c in range(cols_n)]
-            txs = [f"{gx0 + max(0, c - 1) * pitch:.1f}" for c in range(cols_n)]
-            kt = [f"{travel * i / cols_n:.4f}" for i in range(cols_n)] + [f"{travel:.4f}", "1"]
-            h_grid = 6 * pitch + size
-            kt_s = ";".join(kt)
-            op_lead = ";".join(["0.32"] * cols_n + ["0", "0"])
-            op_trail = ";".join(["0.14"] * cols_n + ["0", "0"])
-            cells.append(
-                f'<rect x="{txs[0]}" y="{gy0:.1f}" width="{size}" height="{h_grid:.1f}" fill="{s["led"]}" opacity="0">'
-                f'<animate attributeName="x" values="{";".join(txs)};{txs[-1]};{txs[0]}" keyTimes="{kt_s}" '
-                f'calcMode="discrete" dur="6.0s" begin="1.4s" repeatCount="indefinite"/>'
-                f'<animate attributeName="opacity" values="{op_trail}" keyTimes="{kt_s}" calcMode="discrete" '
-                f'dur="6.0s" begin="1.4s" repeatCount="indefinite"/></rect>'
-                f'<rect x="{xs[0]}" y="{gy0:.1f}" width="{size}" height="{h_grid:.1f}" fill="{s["text"]}" opacity="0">'
-                f'<animate attributeName="x" values="{";".join(xs)};{xs[-1]};{xs[0]}" keyTimes="{kt_s}" '
-                f'calcMode="discrete" dur="6.0s" begin="1.4s" repeatCount="indefinite"/>'
-                f'<animate attributeName="opacity" values="{op_lead}" keyTimes="{kt_s}" calcMode="discrete" '
-                f'dur="6.0s" begin="1.4s" repeatCount="indefinite"/></rect>'
-            )
-            # target lock flash + pixel sparkle when the radar scan hits today's cell
-            cells.append(
-                f'<rect x="{x - 1.5:.1f}" y="{y - 1.5:.1f}" width="{size + 3}" height="{size + 3}" '
-                f'fill="none" stroke="{s["text"]}" stroke-width="1.5">'
-                f'<animate attributeName="stroke" values="{s["muted"]};{s["text"]};{s["text"]};{s["muted"]}" '
-                f'keyTimes="0;0.34;0.48;0.54" calcMode="discrete" dur="6.0s" begin="1.4s" repeatCount="indefinite"/></rect>'
-                + sparkle(x + size - 1, y - 2, 2, s["text"], 6.0, 3.25)
-            )
-        else:
-            cells.append(f'<rect x="{x - 1.5:.1f}" y="{y - 1.5:.1f}" width="{size + 3}" height="{size + 3}" '
-                         f'fill="none" stroke="{s["text"]}" stroke-width="1.5"/>')
-        body.append(f'<g shape-rendering="crispEdges">{"".join(cells)}</g>')
-    days = "day" if v["current"] == 1 else "days"
-    body.append(foot(ts, theme, f"{v['last7']} this week, a {v['current']}-day streak"))
-    label = (f"GitHub contributions for @{USER}: {v['total']} in the last 12 months, {v['last7']} in the last 7 days, "
-             f"current streak {v['current']} {days}, best {v['longest']}.")
-    return svg_doc(STAT_W, STAT_H, ts.defs_svg() + printed("calp", STAT_W, STAT_H, body, animate), label), label
+    if not dates:
+        return "", []
+    last = dates[-1]
+    first = last - dt.timedelta(days=(last.weekday() + 1) % 7 + (weeks - 1) * 7)   # a Sunday
+    active = sorted(c for c in v["days"] if c)
+    cuts = [active[len(active) * q // 4] for q in (1, 2, 3)] if active else []
+    ramp = ["#0d2a3a", "#1f5f7a", "#2f9fc2", "#7fdcff", "#ffffff"]
+    cols, months, tx, ty = {}, [], x, y
+    for date, count in zip(dates, v["days"]):
+        if date < first:
+            continue
+        col, row = (date - first).days // 7, (date.weekday() + 1) % 7
+        level = 1 + sum(count > c for c in cuts) if count else 0
+        cx, cy = x + col * pitch, y + row * pitch
+        cols.setdefault(col, []).append(f'<rect x="{cx:.1f}" y="{cy:.1f}" width="{cell}" height="{cell}" rx="1" fill="{ramp[level]}"/>')
+        if date.day == 1 or (date == first and date.day < 8):
+            months.append((cx, date.strftime("%b").upper()))
+        tx, ty = cx, cy
+    out = [f'<g>{step_in(0.4 + c * 0.012) if animate else ""}{"".join(r)}</g>' for c, r in sorted(cols.items())]
+    out.append(f'<rect x="{tx - 1.5:.1f}" y="{ty - 1.5:.1f}" width="{cell + 3}" height="{cell + 3}" fill="none" stroke="#ffcf6a" stroke-width="1.4"/>')
+    labels, prev = [], -99
+    for mx, name in months:
+        if mx - prev >= 34:
+            labels.append((mx, name))
+            prev = mx
+    return "".join(out), labels
+
+
+def github_panel(v, theme, layout="wide", animate=True):
+    ts = Typesetter("gh")
+    wide = layout == "wide"
+    w = W if wide else 400
+    total, best = v["total"], max(v["longest"], v["current"])
+    share = v["commits"] / total if total else 0
+    rows = [("Pull requests merged", f"{v['merged']}\\{v['prs']}", v["merged"] / v["prs"] if v["prs"] else 0, INK["blue"]),
+            ("Issues closed", f"{v['closed']}\\{v['issues']}", v["closed"] / v["issues"] if v["issues"] else 0, INK["green"]),
+            (f"Commits, {share * 100:.0f}% of activity", f"{v['commits']:,}", share, INK["gold"]),
+            (f"Streak, best {best}", f"{v['current']} DAYS", v["current"] / best if best else 0, INK["violet"])]
+    if wide:
+        h = 300
+        body = [defs(), plaque(0, 0, w, h, pattern=True), mark("github", 18, 16, 18, "#e8e2d4"),
+                text(ts, "GITHUB", "head", 15, 44, 31, "url(#orange)", track=.1),
+                text(ts, f"@{USER}", "semi", 14, w - 18, 30, INK["muted"], anchor="end"),
+                count_up(lambda n: text(ts, f"{n:,}", "num", 56, 18, 92, INK["text"]), total, 0.3 if animate else None),
+                text(ts, "CONTRIBUTIONS IN THE LAST YEAR", "bold", 12, 140, 70, INK["muted"], track=.12),
+                text(ts, f"{v['last7']:,} THIS WEEK", "bold", 12, 140, 88, INK["gold"], track=.12)]
+        for i, (label, val, frac, col) in enumerate(rows):
+            body.append(bar(ts, 18, 128 + i * 42, 250, frac, col, label, val, 0.5 + i * .12 if animate else None))
+        mx, my, mw, mh = 286, 112, 330, 170
+        weeks = 26
+        body.append(f'<rect x="{mx}" y="{my}" width="{mw}" height="{mh}" rx="3" fill="#04121c" stroke="url(#gold)" stroke-width="2"/>'
+                    + text(ts, f"MINIMAP: LAST {weeks} WEEKS", "bold", 11, mx + 12, my + 20, INK["gold"], track=.14))
+        cells, months = minimap(v, mx + 15, my + 34, weeks, 11.6, 9.5, animate)
+        body.append(cells)
+        for x_, name in months:
+            body.append(text(ts, name, "bold", 10, x_, my + 132, INK["dim"], track=.1))
+        if v["busiest"]:
+            body.append(text(ts, f"BUSIEST ON {v['busiest'].upper()}S", "bold", 11, mx + 12, my + 156, INK["sky"], track=.12))
+        lx = 636
+        body.append(text(ts, "LANGUAGES BY BYTES", "bold", 11, lx, my + 6, INK["gold"], track=.14))
+        top = v["langs"][0][1] if v["langs"] else 1
+        for i, (name, frac) in enumerate(v["langs"]):
+            y = my + 30 + i * 28
+            fw = 100 * frac / top
+            body.append(text(ts, name, "semi", 14, lx, y + 10, INK["text"])
+                        + well(lx + 76, y, 104, 12) + f'<rect x="{lx + 78}" y="{y + 2}" width="{fw:.1f}" height="8" fill="url(#goldh)"/>'
+                        + text(ts, f"{frac * 100:.0f}%", "num", 17, w - 18, y + 12, INK["text"], anchor="end"))
+    else:
+        h = 560
+        body = [defs(), plaque(0, 0, w, h, pattern=True), mark("github", 16, 16, 18, "#e8e2d4"),
+                text(ts, "GITHUB", "head", 15, 42, 31, "url(#orange)", track=.1),
+                text(ts, f"@{USER}", "semi", 14, w - 16, 30, INK["muted"], anchor="end"),
+                count_up(lambda n: text(ts, f"{n:,}", "num", 52, 16, 92, INK["text"]), total, 0.3 if animate else None),
+                text(ts, "CONTRIBUTIONS, LAST YEAR", "bold", 11.5, 130, 70, INK["muted"], track=.1),
+                text(ts, f"{v['last7']:,} THIS WEEK", "bold", 11.5, 130, 88, INK["gold"], track=.1)]
+        for i, (label, val, frac, col) in enumerate(rows):
+            body.append(bar(ts, 16, 128 + i * 42, 368, frac, col, label, val, 0.5 + i * .12 if animate else None))
+        my = 296
+        body.append(f'<rect x="16" y="{my}" width="368" height="140" rx="3" fill="#04121c" stroke="url(#gold)" stroke-width="2"/>'
+                    + text(ts, "MINIMAP: LAST 26 WEEKS", "bold", 11, 28, my + 20, INK["gold"], track=.14))
+        cells, months = minimap(v, 28, my + 32, 26, 13.2, 11, animate)
+        body.append(cells)
+        if v["busiest"]:
+            body.append(text(ts, f"BUSIEST ON {v['busiest'].upper()}S", "bold", 11, 28, my + 130, INK["sky"], track=.12))
+        top = v["langs"][0][1] if v["langs"] else 1
+        body.append(text(ts, "LANGUAGES BY BYTES", "bold", 11, 16, 462, INK["gold"], track=.14))
+        for i, (name, frac) in enumerate(v["langs"][:4]):
+            x0, y0 = 16 + (i % 2) * 188, 474 + (i // 2) * 34
+            fw = 80 * frac / top
+            body.append(text(ts, name, "semi", 13.5, x0, y0 + 10, INK["text"])
+                        + well(x0 + 74, y0, 84, 12) + f'<rect x="{x0 + 76}" y="{y0 + 2}" width="{fw:.1f}" height="8" fill="url(#goldh)"/>'
+                        + text(ts, f"{frac * 100:.0f}%", "num", 16, x0 + 180, y0 + 12, INK["text"], anchor="end"))
+    return svg_doc(w, h, ts.defs_svg() + "".join(body), alt(v)), alt(v)
+
+
+def alt(v):
+    langs = ", ".join(f"{name} {share * 100:.0f}%" for name, share in v["langs"])
+    return (f"GitHub activity for @{USER}: {v['total']:,} contributions in the last 12 months, "
+            f"{v['last7']} in the last 7 days. {v['merged']} of {v['prs']} pull requests merged, "
+            f"{v['closed']} of {v['issues']} issues closed, {v['commits']:,} commits in a year. "
+            f"Current streak {v['current']} days, best {max(v['longest'], v['current'])}. "
+            f"Top languages: {langs}." + (f" Busiest on {v['busiest']}s." if v["busiest"] else ""))
 
 
 def write_contributions(v):
-    """Draw the contributions card and fill the CONTRIBUTIONS block. True if the README changed."""
-    svgs = {theme: calendar(v, theme) for theme in THEMES}
-    for theme, (svg, _) in svgs.items():
-        (ASSETS / f"contributions-{theme}.svg").write_text(svg, encoding="utf-8")
-        (ASSETS / f"contributions-still-{theme}.svg").write_text(calendar(v, theme, False)[0], encoding="utf-8")
-    pic = scene("contributions", svgs["light"][1], STAT_W, STAT_H, query="v=" + stamp(svgs["light"][0]))
+    """Draw the GitHub panel and fill the CONTRIBUTIONS block. True if the README changed."""
+    write_pair(ASSETS, "contributions", lambda t, a: github_panel(v, t, "wide", a)[0])
+    write_pair(ASSETS, "contributions-narrow", lambda t, a: github_panel(v, t, "narrow", a)[0])
+    svg, label = github_panel(v, "light", "wide")
+    pic = wide_scene("contributions", "contributions-narrow", label, width=W, query="v=" + stamp(svg))
     return replace_block("CONTRIBUTIONS", f'<a href="https://github.com/{USER}">{pic}</a>')
 
 
@@ -172,19 +225,20 @@ def main():
     ap.add_argument("--from-json", help="read a saved GraphQL `user` object instead of calling the API")
     args = ap.parse_args()
     if args.from_json:
-        user = json.load(open(args.from_json))
+        user = json.load(open(args.from_json, encoding="utf-8"))
     else:
         token = os.environ.get("GITHUB_TOKEN")
         if not token:
             sys.exit("set GITHUB_TOKEN (the Actions token works)")
         try:
             user = fetch(token)
-        except Exception as e:  # noqa: BLE001 - keep yesterday's readings rather than fail the run
-            print(f"::warning::GitHub API unavailable, keeping yesterday's reading ({e})")
+        except Exception as e:  # noqa: BLE001 - keep the last reading rather than fail the run
+            print(f"::warning::GitHub API unavailable, keeping the last reading ({e})")
             return
     v = analyse(user)
     changed = write_contributions(v)
-    print(f"contributions: {v['total']} in 12 months, README {'updated' if changed else 'unchanged'}")
+    print(f"github: {v['total']} contributions, {v['merged']}/{v['prs']} PRs merged, "
+          f"{v['closed']}/{v['issues']} issues closed, README {'updated' if changed else 'unchanged'}")
 
 
 if __name__ == "__main__":
