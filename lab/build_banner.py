@@ -1,282 +1,230 @@
 #!/usr/bin/env python3
-"""Build the profile hero and the contact cards.
+"""Build the hero title screen, the commander console and the contact command keys.
 
-The hero is the portfolio's lab at night, drawn in pixels: LED cabinets that
-blink in steps, a checker floor, the pixel scientist waving next to a sparking
-Tesla coil, and the dexterslab wordmark. Its bottom edge tears into the page.
-It comes wide and narrow (phones), each animated and still; <picture> picks one.
+The hero is drawn, not painted: a night tactical map (grid, contour lines, a coastline,
+radar rings with a sweeping beam) behind chrome LLENOXINN lettering, a gold
+DEXTER JUEVESANO plate and the portfolio button. The console under it is the RTS
+command bar: service record on the left, win orbs and the emblem in the middle, every
+project as an ability socket with its own logo, and the commander card on the right.
 """
+import math
 import random
 
-from notebook import (ASSETS, BRAND, PAPER, SHADE, THEMES, Typesetter, blink, box, flip, mark, nudge_in,
-                      printed, scan_reveal_x, sheet, sprite_at, svg_doc, text_width, torn_path)
-from pixel import CHEVRON, FLASK, TESLA_A, TESLA_B, TUBES, WAVE_A, WAVE_B
+from notebook import ASSETS, THEMES, Typesetter, mark, svg_doc, write_pair
+from rts import HALF, INK, W, bar, defs, glint, logo, orb, plaque, text, well
 
-WORDMARK = "dexterslab"
-TAGLINE = "Let the code begin."
-WHO = "I'm Dexter, a computer science student at UP Cebu."
-BUTTON = "Open the portfolio"
-NIGHT = dict(wall="#0b0b52", cabinet="#15156c", seam="#2626a0", floor_a="#14149a", floor_b="#0f0f7c",
-             leds=["#ff7eb6", "#5ce1e6", "#ffd166", BRAND["lavender"], BRAND["neon"]])
-
-LAYOUTS = {
-    "wide": dict(w=840, h=340, floor=284, text_x=48, word=74, word_y=126, tag=24, tag_y=170,
-                 who=15, who_y=200, btn_y=222, dexter=(620, 6), tesla=(730, 5),
-                 bench=(496, 238, 116, 3), window=(694, 40, 96, 72),
-                 cabinets=[(0, 40, 36, 244), (800, 40, 40, 244)], centre=False),
-    "narrow": dict(w=400, h=380, floor=168, text_x=200, word=52, word_y=236, tag=19, tag_y=270,
-                   who=13.5, who_y=298, btn_y=318, dexter=(150, 5), tesla=(250, 4),
-                   bench=(52, 128, 86, 2), window=(292, 28, 66, 50),
-                   cabinets=[(0, 20, 28, 148), (372, 20, 28, 148)], centre=True),
-}
-NIGHT.update(pipe="#1b1b7e", pipe_hi="#2e2eaa", sky="#05052e", shadow="#07073f", glow=BRAND["lavender"],
-             bench="#1d1d86", bench_top="#3434b8")
+TITLE, NAME = "LLENOXINN", "DEXTER JUEVESANO"
+TAG = "/dev/dexter"
+WHO = "Computer science at UP Cebu. I build web apps, 3D visualizers and CTF tools."
+BUTTON = "ENTER THE PORTFOLIO"
 
 
-def cabinet(x, y, w, h, seed, animate):
-    """A wall of lab equipment: a notched cabinet with a grid of LEDs, a few blinking out of step."""
+def tactical_map(w, h, cx, cy, seed, animate):
+    """The night map behind the title: grid, contours, a coastline, radar rings and a sweep."""
     rng = random.Random(seed)
-    out = [box(x, y, w, h, NIGHT["cabinet"], 4, NIGHT["seam"])]
-    for ly in range(y + 12, y + h - 10, 14):
-        for lx in range(x + 8, x + w - 8, 10):
-            if rng.random() < 0.55:
-                led = f'<rect x="{lx}" y="{ly}" width="5" height="5" fill="{rng.choice(NIGHT["leds"])}"'
-                if animate and rng.random() < 0.3:
-                    led += f'>{blink(rng.choice((0.8, 1.2, 1.6, 2.4)), rng.uniform(0, 2), 0.5, 0.15)}</rect>'
-                else:
-                    led += f' opacity="{rng.choice((0.55, 0.8, 1))}"/>'
-                out.append(led)
-    return f'<g shape-rendering="crispEdges">{"".join(out)}</g>'
-
-
-def floor(y, w, h):
-    d_a, d_b = [], []
-    size = 16
-    for row, fy in enumerate(range(y, h, size)):
-        for col, fx in enumerate(range(0, w, size)):
-            (d_a if (row + col) % 2 else d_b).append(f"M{fx} {fy}h{size}v{size}h-{size}Z")
-    return (f'<g shape-rendering="crispEdges"><path d="{"".join(d_a)}" fill="{NIGHT["floor_a"]}"/>'
-            f'<path d="{"".join(d_b)}" fill="{NIGHT["floor_b"]}"/>'
-            f'<rect x="0" y="{y}" width="{w}" height="3" fill="{BRAND["neon"]}" opacity="0.6"/></g>')
-
-
-def crisp(*parts):
-    return f'<g shape-rendering="crispEdges">{"".join(parts)}</g>'
-
-
-def pipe(w, y):
-    """A ceiling pipe across the room, with a collar every few metres."""
-    collars = "".join(f'<rect x="{x}" y="{y - 2}" width="8" height="10" fill="{NIGHT["pipe_hi"]}"/>'
-                      for x in range(60, w, 140))
-    return crisp(f'<rect x="0" y="{y}" width="{w}" height="6" fill="{NIGHT["pipe"]}"/>',
-                 f'<rect x="0" y="{y}" width="{w}" height="2" fill="{NIGHT["pipe_hi"]}"/>', collars)
-
-
-def window(x, y, w, h, seed, animate):
-    """A high window onto the night: a pixel moon and stars that twinkle at their own pace."""
-    rng = random.Random(seed)
-    out = [box(x - 4, y - 4, w + 8, h + 8, NIGHT["cabinet"], 3, NIGHT["seam"]),
-           f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{NIGHT["sky"]}"/>']
-    mx, my, r = x + w * 0.72, y + h * 0.34, max(5, h // 9)
-    moon = "".join(f"M{mx + dx * 2:.0f} {my + dy * 2:.0f}h2v2h-2Z"
-                   for dx in range(-r, r) for dy in range(-r, r)
-                   if dx * dx + dy * dy < r * r and (dx + r * 0.45) ** 2 + (dy - r * 0.2) ** 2 >= (r * 0.8) ** 2)
-    out.append(f'<path d="{moon}" fill="{BRAND["paper"]}"/>')
-    for _ in range(9):
-        sx, sy = x + rng.randrange(4, w - 6, 2), y + rng.randrange(4, h - 6, 2)
-        if abs(sx - mx) < r * 2.6 and abs(sy - my) < r * 2.6:
-            continue
-        size = rng.choice((2, 2, 3))
-        twinkle = blink(rng.uniform(2.6, 5.0), rng.uniform(0, 3), rhythm=rng.choice(
-            ("1111110111", "1101111111", "1111111011"))) if animate else ""
-        out.append(f'<rect x="{sx}" y="{sy}" width="{size}" height="{size}" fill="{BRAND["lavender"]}">{twinkle}</rect>')
-    # mullions: the window is two panes by two
-    out.append(f'<rect x="{x + w // 2 - 2}" y="{y}" width="4" height="{h}" fill="{NIGHT["cabinet"]}"/>'
-               f'<rect x="{x}" y="{y + h // 2 - 2}" width="{w}" height="4" fill="{NIGHT["cabinet"]}"/>')
-    return crisp(*out)
-
-
-def lamp(cx, top, floor_y, spread, seed):
-    """A hanging lamp and its cone of light, drawn as an ordered dither that thins toward the floor."""
-    from notebook import BAYER
-    shade_y = top + 24
-    out = [f'<rect x="{cx - 1}" y="{top}" width="2" height="24" fill="{NIGHT["pipe_hi"]}"/>',
-           f'<path d="M{cx - 10} {shade_y}h20v4h6v6h-32v-6h6Z" fill="{NIGHT["pipe_hi"]}"/>',
-           f'<rect x="{cx - 6}" y="{shade_y + 10}" width="12" height="3" fill="{BRAND["paper"]}"/>']
-    cell, cone = 4, []
-    y0 = shade_y + 14
-    for r, y in enumerate(range(y0, floor_y, cell)):
-        depth = (y - y0) / max(floor_y - y0, 1)
-        half = 14 + depth * spread
-        density = 0.42 - 0.30 * depth
-        for c, x in enumerate(range(int(cx - half), int(cx + half), cell)):
-            if BAYER[r % 4][c % 4] < density * 16:
-                cone.append(f"M{x} {y}h{cell}v{cell}h-{cell}Z")
-    out.append(f'<path d="{"".join(cone)}" fill="{NIGHT["glow"]}" opacity="0.16"/>')
-    return crisp(*out)
-
-
-def pool(cx, floor_y, half):
-    """The lamp's light on the floor: stepped rows, widest nearest the viewer."""
-    rows = "".join(f'<rect x="{cx - half + k * 6}" y="{floor_y + 3 + k * 4}" width="{2 * half - k * 12}" height="4"/>'
-                   for k in range(4))
-    return crisp(f'<g fill="{NIGHT["glow"]}" opacity="0.12">{rows}</g>')
-
-
-def shadow(cx, floor_y, half):
-    return crisp(f'<rect x="{cx - half}" y="{floor_y + 3}" width="{2 * half}" height="4" fill="{NIGHT["shadow"]}"/>',
-                 f'<rect x="{cx - half + 6}" y="{floor_y + 7}" width="{2 * half - 12}" height="3" fill="{NIGHT["shadow"]}"/>')
-
-
-def bench(x, top, w, scale, floor_y, animate):
-    """A lab bench holding a rack of tubes and the flask; bubbles climb out of the flask now and then."""
-    out = [f'<rect x="{x}" y="{top}" width="{w}" height="6" fill="{NIGHT["bench"]}"/>',
-           f'<rect x="{x}" y="{top}" width="{w}" height="2" fill="{NIGHT["bench_top"]}"/>',
-           f'<rect x="{x + 6}" y="{top + 6}" width="5" height="{floor_y - top - 6}" fill="{NIGHT["bench"]}"/>',
-           f'<rect x="{x + w - 11}" y="{top + 6}" width="5" height="{floor_y - top - 6}" fill="{NIGHT["bench"]}"/>']
-    fx = x + 6
-    out.append(sprite_at(FLASK, fx, top - len(FLASK) * scale, scale))
-    rx = x + w - len(TUBES[0]) * (scale - 1) - 6
-    out.append(sprite_at(TUBES, rx, top - len(TUBES) * (scale - 1), scale - 1))
-    if animate:     # three bubbles leave the neck one after another, stepping up as they go
-        neck_x, neck_y = fx + 5 * scale, top - len(FLASK) * scale
-        for k in range(3):
-            ys = ";".join(f"{neck_y - 4 - s * 2 * scale}" for s in range(6))
-            out.append(f'<rect x="{neck_x + (k % 2) * scale}" y="{neck_y}" width="{scale}" height="{scale}" '
-                       f'fill="{BRAND["lavender"]}" opacity="0">'
-                       f'<animate attributeName="y" values="{ys}" calcMode="discrete" dur="1.8s" begin="{k * 0.6}s" '
-                       f'repeatCount="indefinite"/>'
-                       f'<animate attributeName="opacity" values="0;0.9;0.9;0.9;0.6;0" calcMode="discrete" dur="1.8s" '
-                       f'begin="{k * 0.6}s" repeatCount="indefinite"/></rect>')
-    return crisp(*out), fx + len(FLASK[0]) * scale / 2
-
-
-def arc(x0, y0, x1, y1, seed, W, H, animate):
-    """Now and then the coil throws a bolt at the cabinet, and the room flashes."""
-    if not animate:
-        return ""
-    rng = random.Random(seed)
-    steps, pts = 7, []
-    for i in range(steps + 1):
-        t = i / steps
-        jitter = 0 if i in (0, steps) else rng.randint(-8, 8)
-        pts.append((round(x0 + (x1 - x0) * t), round(y0 + (y1 - y0) * t + jitter)))
-    cells = []
-    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
-        n = max(abs(bx - ax), abs(by - ay)) // 2 or 1
-        for i in range(n + 1):
-            cells.append(f"M{round(ax + (bx - ax) * i / n)} {round(ay + (by - ay) * i / n)}h3v3h-3Z")
-    rhythm = "000000001010000000000100"
-    on = blink(4.8, 0.9, rhythm=rhythm)
-    return (f'<g opacity="0">{on}<path d="{"".join(cells)}" fill="{BRAND["paper"]}" shape-rendering="crispEdges"/>'
-            f'<rect width="{W}" height="{H}" fill="{BRAND["lavender"]}" opacity="0.05"/></g>')
-
-
-def banner(theme, animate=True, layout="wide"):
-    L, b = LAYOUTS[layout], BRAND
-    W, H = L["w"], L["h"]
-    ts = Typesetter(f"hero{layout[0]}")
-    at = (lambda t: t) if animate else (lambda t: None)
-    fl = L["floor"]
-    dx, ds = L["dexter"]
-    tx, tsz = L["tesla"]
-    dexter_cx = dx + 8 * ds
-    coil_cx, coil_top = tx + 6 * tsz, fl - len(TESLA_A) * tsz
-    pipe_y = 12 if layout == "wide" else 8
-
-    # back to front: wall, pipe, window, cabinets, lamp light, floor, shadows, then the actors
-    out = [f'<rect width="{W}" height="{H}" fill="{NIGHT["wall"]}"/>',
-           crisp(*(f'<rect x="0" y="{y}" width="{W}" height="1" fill="{NIGHT["cabinet"]}"/>'
-                   for y in range(pipe_y + 40, fl, 56))),           # faint wall panel seams
-           pipe(W, pipe_y), window(*L["window"], f"win{layout}", animate)]
-    for k, c in enumerate(L["cabinets"]):
-        out.append(cabinet(*c, f"{layout}{k}", animate))
-    out.append(lamp(dexter_cx, pipe_y + 6, fl, 70 if layout == "wide" else 44, layout))
-    out.append(floor(fl, W, H))
-    out.append(pool(dexter_cx, fl, 60 if layout == "wide" else 40))
-    out.append(shadow(dexter_cx, fl, 5 * ds) + shadow(coil_cx, fl, 4 * tsz))
-    bx, btop, bw, bscale = L["bench"]
-    out.append(shadow(bx + bw / 2, fl, bw / 2))
-    bench_svg, _ = bench(bx, btop, bw, bscale + 1, fl, animate)
-    out.append(bench_svg)
-
-    wa, wb = sprite_at(WAVE_A, dx, fl - len(WAVE_A) * ds, ds), sprite_at(WAVE_B, dx, fl - len(WAVE_B) * ds, ds)
-    out.append(flip(wa, wb, 4.2, 0.6, rhythm="0101010000000000") if animate else wa)
-    ta = sprite_at(TESLA_A, tx, coil_top, tsz)
-    tb = sprite_at(TESLA_B, tx, coil_top, tsz)
-    out.append(flip(ta, tb, 2.4, 0, rhythm="0110100011010010") if animate else ta)
-    cab_x = L["cabinets"][1][0]
-    out.append(arc(coil_cx, coil_top + 2 * tsz, cab_x + 2, coil_top - 10, layout, W, H, animate))
-
-    # the words
-    x, anchor = L["text_x"], ("middle" if L["centre"] else "start")
-    word = (ts.text(WORDMARK, "pixel", L["word"], x + 4, L["word_y"] + 4, b["neon"], anchor=anchor)[0]
-            + ts.text(WORDMARK, "pixel", L["word"], x, L["word_y"], b["paper"], anchor=anchor)[0])
-    if animate:      # horizontal phosphor scanline sweeps across the wordmark left-to-right
-        ww = text_width(WORDMARK, "pixel", L["word"]) + 10
-        wx = x - ww / 2 if L["centre"] else x - 2
-        wh = L["word"] * 1.05
-        out.append(scan_reveal_x(f"word{layout[0]}", wx, L["word_y"] - wh + 14, ww, wh, word, 0.12, 0.44))
-    else:
-        out.append(word)
-    out.append(f'<g>{nudge_in(at(0.42), 4)}'
-               + ts.text(TAGLINE, "title", L["tag"], x, L["tag_y"], b["lavender"], anchor=anchor)[0] + "</g>")
-    out.append(f'<g>{nudge_in(at(0.54), 3)}'
-               + ts.text(WHO, "body", L["who"], x, L["who_y"], b["paper"], anchor=anchor)[0] + "</g>")
-    bw = text_width(BUTTON, "body-bold", 14) + 52
-    bx = x - bw / 2 if L["centre"] else x
-    by = L["btn_y"]
-    chev = sprite_at(CHEVRON, bx + bw - 26, by + 11, 2, {"P": b["ink"]})
+    out = [f'<rect width="{w}" height="{h}" fill="#070b12"/>',
+           f'<radialGradient id="haze" cx=".5" cy=".62" r=".7"><stop offset="0" stop-color="#16324d"/>'
+           f'<stop offset="1" stop-color="#070b12" stop-opacity="0"/></radialGradient>',
+           f'<rect width="{w}" height="{h}" fill="url(#haze)"/>']
+    grid = "".join(f"M{x} 0V{h}" for x in range(0, w, 36)) + "".join(f"M0 {y}H{w}" for y in range(0, h, 36))
+    out.append(f'<path d="{grid}" stroke="#24507a" stroke-width="1" opacity=".6"/>')
+    for k in range(7):                       # contour lines across the map
+        y0 = h * (.18 + k * .11)
+        pts = " ".join(f"{x},{y0 + 9 * math.sin(x / 70 + k * 1.7) + 6 * math.sin(x / 23 + k):.1f}" for x in range(0, w + 20, 20))
+        out.append(f'<polyline points="{pts}" fill="none" stroke="#3a76a6" stroke-width="1.2" opacity=".5"/>')
+    coast = [f"0,{h}"]
+    for x in range(0, w + 24, 24):
+        coast.append(f"{x},{h - 46 - 20 * math.sin(x / 90) - rng.randint(0, 14)}")
+    coast.append(f"{w},{h}")
+    out.append(f'<polygon points="{" ".join(coast)}" fill="#0b1520" stroke="#2f6a91" stroke-width="1.5"/>')
+    for r in (60, 120, 180, 240):
+        out.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#5aa6dd" stroke-width="1.2" opacity=".6" stroke-dasharray="3 5"/>')
+    out.append(f'<path d="M{cx - 260} {cy}H{cx + 260}M{cx} {cy - 260}V{cy + 260}" stroke="#3d7fae" opacity=".3"/>')
+    sweep = (f'<path d="M{cx} {cy}L{cx + 240} {cy}A240 240 0 0 0 {cx + 240 * math.cos(math.radians(-35)):.1f} '
+             f'{cy + 240 * math.sin(math.radians(-35)):.1f}Z" fill="#7fdcff" opacity=".10"/>'
+             f'<path d="M{cx} {cy}L{cx + 240} {cy}" stroke="#bfefff" stroke-width="1.5" opacity=".6"/>')
     if animate:
-        chev = (f'<g><animateTransform attributeName="transform" type="translate" values="0 0;3 0;0 0;0 0" '
-                f'keyTimes="0;0.10;0.20;1" calcMode="discrete" dur="2.8s" begin="1.2s" repeatCount="indefinite"/>{chev}</g>')
-    out.append(f'<g>{nudge_in(at(0.66), 4)}'
-               + box(bx + 4, by + 4, bw, 36, b["neon"], 3) + box(bx, by, bw, 36, b["paper"], 3)
-               + ts.text(BUTTON, "body-bold", 14, bx + 16, by + 23, b["ink"])[0] + chev + "</g>")
-
-    # the bottom edge tears into the page, as the portfolio's sheets do
-    page = PAPER[theme]["page"]
-    tear = torn_path(W, 12, f"hero{layout}", top=True, bottom=False)
-    out.append(f'<path transform="translate(0 {H - 10})" d="{tear}" fill="{page}" shape-rendering="crispEdges"/>')
-    return svg_doc(W, H, ts.defs_svg() + "".join(out),
-                   f"{WORDMARK}: {TAGLINE} {WHO} Open the portfolio.")
-
-
-CONTACTS = [("linkedin", "LinkedIn", "linkedin.com/in/dsjuevesano"),
-            ("github", "GitHub", "github.com/Llenoxinn")]
-CONTACT_W, CONTACT_H = 376, 92
+        sweep = (f'<g>{sweep}<animateTransform attributeName="transform" type="rotate" from="0 {cx} {cy}" '
+                 f'to="-360 {cx} {cy}" dur="8s" repeatCount="indefinite"/></g>')
+    out.append(sweep)
+    for _ in range(9):                       # contacts on the map, a few of them friendly gold
+        a, r = rng.uniform(0, 6.28), rng.uniform(70, 230)
+        x, y = cx + r * math.cos(a), cy + r * math.sin(a) * .6
+        col = "#ffcf6a" if rng.random() < .35 else "#7fdcff"
+        blink = (f'<animate attributeName="opacity" values="1;.25;1" dur="{rng.uniform(1.6, 3.2):.1f}s" '
+                 f'repeatCount="indefinite"/>' if animate else "")
+        out.append(f'<rect x="{x - 2:.0f}" y="{y - 2:.0f}" width="4" height="4" fill="{col}">{blink}</rect>')
+    out.append(f'<rect width="{w}" height="{h}" fill="#05070b" opacity=".12"/>')
+    return "".join(out)
 
 
-def contact(key, label, url, theme, animate=True):
-    s = PAPER[theme]
+def filigree(w):
+    """Iron scrollwork across the top edge with a crest in the middle."""
+    c = w / 2
+    return (f'<g fill="none" stroke="url(#gold)" stroke-width="2" stroke-linecap="round">'
+            f'<path d="M{c - 70} 8q-40 -4 -70 10q-30 14 -70 6"/><path d="M{c + 70} 8q40 -4 70 10q30 14 70 6"/>'
+            f'<path d="M{c - 30} 4q30 -10 60 0"/></g>'
+            f'<path d="M{c} -4l12 16 -12 10 -12 -10z" fill="#1d1f24" stroke="#ffcf6a" stroke-width="1.5"/>')
+
+
+def hero(theme, animate=True, layout="wide"):
+    wide = layout == "wide"
+    w, h = (W, 360) if wide else (400, 400)
+    ts = Typesetter("hr")
+    body = [defs(), f'<clipPath id="hclip"><rect width="{w}" height="{h}" rx="6"/></clipPath><g clip-path="url(#hclip)">',
+            tactical_map(w, h, w / 2, h * (.6 if wide else .58), "map", animate),
+            f'<rect width="{w}" height="{h}" fill="url(#vig)"/></g>',
+            f'<radialGradient id="vig" cx=".5" cy=".5" r=".75"><stop offset=".55" stop-color="#000" stop-opacity="0"/>'
+            f'<stop offset="1" stop-color="#000" stop-opacity=".75"/></radialGradient>',
+            f'<rect x="1" y="1" width="{w - 2}" height="{h - 2}" rx="6" fill="none" stroke="url(#gold)" stroke-width="2"/>',
+            filigree(w)]
+    cx = w / 2
+    ty = 30 if wide else 32
+    tw = 150 if wide else 140
+    body.append(f'<rect x="{cx - tw / 2}" y="{ty}" width="{tw}" height="26" rx="2" fill="url(#steel)" stroke="url(#gold)" stroke-width="1.5"/>'
+                + text(ts, TAG, "semi", 16, cx, ty + 19, INK["gold"], anchor="middle", track=.04))
+    if wide:
+        body.append(f'<rect x="60" y="{ty + 12}" width="{cx - tw / 2 - 72}" height="2" fill="url(#goldh)" opacity=".8"/>'
+                    f'<rect x="{cx + tw / 2 + 12}" y="{ty + 12}" width="{cx - tw / 2 - 72}" height="2" fill="url(#goldh)" opacity=".8"/>')
+    size, base = (104, 168) if wide else (60, 140)
+    body.append(text(ts, TITLE, "title", size, cx, base + 5, "#e8891f", anchor="middle", stroke=("#e8891f", 4)))
+    body.append(text(ts, TITLE, "title", size, cx, base, "url(#chrome)", anchor="middle", stroke=("#0d1015", 5)))
+    if animate:
+        body.append(f'<clipPath id="tclip"><rect x="0" y="{base - size * .8}" width="{w}" height="{size * .85}"/></clipPath>'
+                    f'<g clip-path="url(#tclip)">{glint(40, base - size * .8, w - 80, size * .85, 6.0, 1.4)}</g>')
+    nsize, ny = (24, 210) if wide else (17, 178)
+    body.append(text(ts, NAME, "head", nsize, cx, ny, "url(#orange)", anchor="middle", track=.3, stroke=("#1a0b03", 2)))
+    body.append(f'<rect x="{cx - (170 if wide else 140)}" y="{ny + 12}" width="{340 if wide else 280}" height="2" fill="url(#goldh)"/>')
+    lines = [WHO] if wide else ["Computer science at UP Cebu.", "I build web apps, 3D visualizers and CTF tools."]
+    for i, line in enumerate(lines):
+        ly = ny + 40 + i * 22
+        body.append(f'<rect x="{cx - 290 if wide else 20}" y="{ly - 17}" width="{580 if wide else 360}" height="24" fill="#05070b" opacity=".7"/>'
+                    + text(ts, line, "semi", 17 if wide else 15.5, cx, ly, "#e8eef5", anchor="middle"))
+    bw, bh = 250, 44
+    by = h - 74 if wide else h - 70
+    body.append(f'<rect x="{cx - bw / 2 + 2}" y="{by + 4}" width="{bw}" height="{bh}" rx="3" fill="#000" opacity=".6"/>'
+                f'<rect x="{cx - bw / 2}" y="{by}" width="{bw}" height="{bh}" rx="3" fill="url(#orange)" stroke="#fff2c4" stroke-width="1.5"/>'
+                + text(ts, BUTTON, "head", 15, cx - 14, by + 28, "#1c1005", anchor="middle", track=.1)
+                + f'<path d="M{cx + bw / 2 - 22} {by + 15}l10 7-10 7z" fill="#1c1005"/>')
+    if animate:
+        body.append(f'<clipPath id="bclip"><rect x="{cx - bw / 2}" y="{by}" width="{bw}" height="{bh}" rx="3"/></clipPath>'
+                    f'<g clip-path="url(#bclip)">{glint(cx - bw / 2, by, bw, bh, 4.0, 2.4)}</g>')
+    return svg_doc(w, h, ts.defs_svg() + "".join(body), f"{TITLE}: {NAME}. {WHO} Enter the portfolio.")
+
+
+# ---------------------------------------------------------------- the commander console
+
+def console(theme, animate=True, layout="wide"):
+    from build_headers import WINS
+    from build_projects import PROJECTS
+    from build_shelf import SHELF
+    wide = layout == "wide"
+    ts = Typesetter("cn")
+    tools = sum(len(t) for _, t in SHELF)
+    record = [("Units deployed", str(len(PROJECTS))), ("Medals earned", str(len(WINS))),
+              ("Structures", str(tools)), ("In the field since", "APR 2026")]
+    champs = sum(1 for w in WINS if w["title"].startswith("Champion"))
+    if wide:
+        w, h = W, 236
+        crown = (f'<path d="M0 58Q60 54 96 34L150 34Q190 10 250 26L330 26Q370 4 {w / 2} 4Q{w - 370} 4 {w - 330} 26'
+                 f'L{w - 250} 26Q{w - 190} 10 {w - 150} 34L{w - 96} 34Q{w - 60} 54 {w} 58V{h - 4}H0Z" ')
+        body = [defs(), '<path transform="translate(2 4)" opacity=".55" fill="#000" ' + crown[5:] + '/>',
+                crown + 'fill="url(#iron)" stroke="url(#rim)" stroke-width="3"/>',
+                crown + 'fill="url(#plate)"/>',
+                f'<g fill="#55595f">{"".join(f"<circle cx={chr(34)}{14 + i * 40}{chr(34)} cy={chr(34)}{h - 12}{chr(34)} r={chr(34)}2.5{chr(34)}/>" for i in range(21))}</g>']
+        # service record
+        for i, (k, v) in enumerate(record):
+            y = 70 + i * 40
+            body.append(well(18, y, 214, 28) + f'<rect x="18" y="{y}" width="4" height="28" fill="url(#gold)"/>'
+                        + text(ts, k.upper(), "bold", 11, 30, y + 18, INK["muted"], track=.14)
+                        + text(ts, v, "num", 22, 224, y + 21, INK["text"], anchor="end"))
+        # win orbs: one lit per real result
+        for i in range(10):
+            lit = i < len(WINS)
+            cx = 262 + i * 17
+            delay = f'<animate attributeName="opacity" values="0;1" keyTimes="0;1" calcMode="discrete" dur="{0.5 + i * .25:.2f}s" fill="freeze"/>' if animate and lit else ""
+            body.append(f'<circle cx="{cx}" cy="50" r="6" fill="url(#socket)" stroke="#70747b"/>'
+                        + (f'<circle cx="{cx}" cy="50" r="6" fill="url(#orbon)" stroke="#ffe6a6">{delay}</circle>' if lit else ""))
+        body.append(text(ts, f"{len(WINS)} WINS", "bold", 11, 256, 36, INK["gold"], track=.14))
+        # emblem: an atom over the socket, the commander below
+        body.append(orb(w / 2, 100, 64, '<g fill="none" stroke="#ffcf6a" stroke-width="2">'
+                                          + "".join(f'<ellipse cx="{w / 2}" cy="100" rx="22" ry="8" transform="rotate({a} {w / 2} 100)"/>' for a in (0, 60, 120))
+                                          + f'</g><circle cx="{w / 2}" cy="100" r="5" fill="#ff9a2e"/>'))
+        body.append(f'<circle cx="{w / 2}" cy="186" r="44" fill="url(#socket)" stroke="#5d6168" stroke-width="2"/>'
+                    + text(ts, "CMDR", "bold", 11, w / 2, 178, INK["gold"], anchor="middle", track=.3)
+                    + text(ts, "LLENOXINN", "head", 13, w / 2, 197, INK["text"], anchor="middle"))
+        # ability sockets: every project, with its own logo where it has one
+        spots = [(262, 104), (312, 104), (262, 156), (312, 156), (528, 104), (578, 104), (528, 156), (578, 156), (628, 130)]
+        for (x, y), p in zip(spots, PROJECTS):
+            body.append(orb(x, y, 40, logo(p["logo"], x - 14, y - 14, 28) if p.get("logo") else glyph(p["art"], x, y)))
+        # commander card
+        cx0 = w - 164
+        body.append(f'<rect x="{cx0}" y="52" width="148" height="170" rx="3" fill="#121418" stroke="url(#gold)" stroke-width="3"/>'
+                    + text(ts, "COMMANDER", "bold", 11, cx0 + 12, 72, INK["gold"], track=.16)
+                    + text(ts, "Dexter Juevesano", "head", 14, cx0 + 12, 94, INK["text"])
+                    + text(ts, "Computer science", "body", 13, cx0 + 12, 114, INK["soft"])
+                    + text(ts, "student at UP Cebu", "body", 13, cx0 + 12, 130, INK["soft"])
+                    + f'<rect x="{cx0 + 12}" y="142" width="124" height="1" fill="#ffcf6a" opacity=".4"/>'
+                    + text(ts, f"{champs}X CHAMPION", "bold", 12, cx0 + 12, 162, "#ffe08a", track=.1)
+                    + text(ts, "TOP 2, HACKFORGOV5", "bold", 12, cx0 + 12, 180, INK["soft"], track=.06)
+                    + text(ts, TAG, "semi", 14, cx0 + 12, 206, INK["sky"]))
+    else:
+        w, h = 400, 300
+        body = [defs(), plaque(0, 0, w, h, pattern=True)]
+        for i, (k, v) in enumerate(record):
+            x, y = 16 + (i % 2) * 188, 20 + (i // 2) * 38
+            body.append(well(x, y, 180, 28) + f'<rect x="{x}" y="{y}" width="4" height="28" fill="url(#gold)"/>'
+                        + text(ts, k.upper(), "bold", 10, x + 12, y + 18, INK["muted"], track=.1)
+                        + text(ts, v, "num", 20, x + 172, y + 21, INK["text"], anchor="end"))
+        for i, p in enumerate(PROJECTS):
+            x, y = 40 + (i % 5) * 80, 128 + (i // 5) * 58
+            body.append(orb(x, y, 40, logo(p["logo"], x - 14, y - 14, 28) if p.get("logo") else glyph(p["art"], x, y)))
+        body.append(text(ts, f"{champs}X CHAMPION   TOP 2, HACKFORGOV5", "bold", 12, w / 2, 262, "#ffe08a", anchor="middle", track=.1)
+                    + text(ts, "CMDR LLENOXINN", "head", 13, w / 2, 282, INK["text"], anchor="middle"))
+    return svg_doc(w, h, ts.defs_svg() + "".join(body),
+                   f"Commander Llenoxinn: {len(PROJECTS)} projects, {len(WINS)} wins, {tools} tools, on GitHub since April 2026.")
+
+
+GLYPHS = {   # original line glyphs for projects without a logo of their own
+    "helix": '<path d="M-10 -12c14 6 6 10 20 14s-20 8-6 14" stroke="#fff" stroke-width="2.4" fill="none"/>'
+             '<path d="M10 -12c-14 6-6 10-20 14s20 8 6 14" stroke="#fff" stroke-width="1.4" fill="none" opacity=".7"/>',
+    "orbit": '<circle r="5" fill="#fff"/><circle r="11" stroke="#fff" stroke-width="2" fill="none" stroke-dasharray="4 3"/>'
+             '<circle cx="9" cy="-7" r="2.6" fill="#fff"/>',
+}
+
+
+def glyph(key, x, y):
+    return f'<g transform="translate({x} {y})">{GLYPHS.get(key, "")}</g>'
+
+
+# ---------------------------------------------------------------- contact command keys
+
+CONTACTS = [("linkedin", "Recruit on LinkedIn", "linkedin.com/in/dsjuevesano"),
+            ("github", "Follow on GitHub", "github.com/Llenoxinn")]
+CONTACT_W, CONTACT_H = HALF, 80
+
+
+def contact(key, label, url, theme):
     ts = Typesetter("ct")
-    right = CONTACT_W - SHADE - 14
-    # the arrow's button: centred on the network icon's row, the chevron centred on its drawn pixels
-    bs, by = 32, 14 + 30 - 16
-    bx = right - bs
-    cols = max(r.rstrip(".").__len__() for r in CHEVRON)          # drawn width in cells (5 of 7)
-    cx = bx + (bs - cols * 2) / 2
-    cy = by + (bs - len(CHEVRON) * 2) / 2
-    chev = sprite_at(CHEVRON, cx, cy, 2, {"P": s["text"]})
-    if animate:     # a small nudge toward the link now and then, from the centred rest position
-        chev = (f'<g><animateTransform attributeName="transform" type="translate" values="0 0;2 0;0 0;0 0" '
-                f'keyTimes="0;0.1;0.2;1" calcMode="discrete" dur="2.4s" begin="1s" repeatCount="indefinite"/>{chev}</g>')
-    body = [sheet(theme, CONTACT_W, CONTACT_H, key),
-            f'<g>{nudge_in(0.14, 4) if animate else ""}{box(14, 14, 60, 60, BRAND["ink"], 3) + mark(key, 28, 28, 32, BRAND["paper"])}</g>',
-            f'<g>{nudge_in(0.22, 3) if animate else ""}'
-            + ts.text(label, "title", 18, 88, 40, s["text"])[0]
-            + ts.text(url, "body", 13, 88, 61, s["muted"])[0] + '</g>',
-            f'<g>{nudge_in(0.28, 3) if animate else ""}{box(bx, by, bs, bs, s["soft"], 2) + chev}</g>']
-    return svg_doc(CONTACT_W, CONTACT_H, ts.defs_svg() + printed(f"ct{key}", CONTACT_W, CONTACT_H, body, animate, dur=0.38), f"{label}: {url}")
+    body = [defs(), plaque(0, 0, CONTACT_W, CONTACT_H),
+            '<rect x="14" y="12" width="54" height="54" rx="4" fill="url(#orange)" stroke="#fff2c4" stroke-width="1"/>',
+            mark(key, 27, 25, 28, "#1c1305"),
+            text(ts, label.upper(), "head", 15, 84, 36, INK["text"], track=.06),
+            text(ts, url, "body", 14, 84, 58, INK["muted"]),
+            f'<path d="M{CONTACT_W - 34} 30l12 9-12 9z" fill="url(#orange)" stroke="#ffe08a"/>']
+    return svg_doc(CONTACT_W, CONTACT_H, ts.defs_svg() + "".join(body), f"{label}: {url}")
 
 
 if __name__ == "__main__":
+    for old in ASSETS.glob("banner*.svg"):
+        old.unlink()
+    write_pair(ASSETS, "banner", lambda t, a: hero(t, a, "wide"))
+    write_pair(ASSETS, "banner-narrow", lambda t, a: hero(t, a, "narrow"))
+    write_pair(ASSETS, "console", lambda t, a: console(t, a, "wide"))
+    write_pair(ASSETS, "console-narrow", lambda t, a: console(t, a, "narrow"))
+    for old in ASSETS.glob("contact-*.svg"):
+        old.unlink()
     for theme in THEMES:
-        for layout, stem in (("wide", "banner"), ("narrow", "banner-narrow")):
-            (ASSETS / f"{stem}-{theme}.svg").write_text(banner(theme, True, layout), encoding="utf-8")
-            (ASSETS / f"{stem}-still-{theme}.svg").write_text(banner(theme, False, layout), encoding="utf-8")
         for key, label, url in CONTACTS:
             (ASSETS / f"contact-{key}-{theme}.svg").write_text(contact(key, label, url, theme), encoding="utf-8")
-            (ASSETS / f"contact-{key}-still-{theme}.svg").write_text(contact(key, label, url, theme, False),
-                                                                    encoding="utf-8")
-    print("wrote the wide and narrow hero, their stills and the contact cards")
+    print("wrote the hero, the console and the contact keys")
