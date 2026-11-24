@@ -111,7 +111,7 @@ def minimap(v, x, y, weeks, pitch, cell, animate):
     first = last - dt.timedelta(days=(last.weekday() + 1) % 7 + (weeks - 1) * 7)   # a Sunday
     active = sorted(c for c in v["days"] if c)
     cuts = [active[len(active) * q // 4] for q in (1, 2, 3)] if active else []
-    ramp = ["#0d2a3a", "#1f5f7a", "#2f9fc2", "#7fdcff", "#ffffff"]
+    ramp = ["#24262b", "#5a3a10", "#a8650f", "#e8891f", "#ffe08a"]   # iron to molten gold
     cols, months, tx, ty = {}, [], x, y
     for date, count in zip(dates, v["days"]):
         if date < first:
@@ -155,14 +155,14 @@ def github_panel(v, theme, layout="wide", animate=True):
             body.append(bar(ts, 18, 128 + i * 42, 250, frac, col, label, val, 0.5 + i * .12 if animate else None))
         mx, my, mw, mh = 286, 112, 330, 170
         weeks = 26
-        body.append(f'<rect x="{mx}" y="{my}" width="{mw}" height="{mh}" rx="3" fill="#04121c" stroke="url(#gold)" stroke-width="2"/>'
+        body.append(f'<rect x="{mx}" y="{my}" width="{mw}" height="{mh}" rx="3" fill="url(#well)" stroke="url(#gold)" stroke-width="2"/>'
                     + text(ts, f"MINIMAP: LAST {weeks} WEEKS", "bold", 11, mx + 12, my + 20, INK["gold"], track=.14))
         cells, months = minimap(v, mx + 15, my + 34, weeks, 11.6, 9.5, animate)
         body.append(cells)
         for x_, name in months:
             body.append(text(ts, name, "bold", 10, x_, my + 132, INK["dim"], track=.1))
         if v["busiest"]:
-            body.append(text(ts, f"BUSIEST ON {v['busiest'].upper()}S", "bold", 11, mx + 12, my + 156, INK["sky"], track=.12))
+            body.append(text(ts, f"BUSIEST ON {v['busiest'].upper()}S", "bold", 11, mx + 12, my + 156, INK["gold"], track=.12))
         lx = 636
         body.append(text(ts, "LANGUAGES BY BYTES", "bold", 11, lx, my + 6, INK["gold"], track=.14))
         top = v["langs"][0][1] if v["langs"] else 1
@@ -183,12 +183,12 @@ def github_panel(v, theme, layout="wide", animate=True):
         for i, (label, val, frac, col) in enumerate(rows):
             body.append(bar(ts, 16, 128 + i * 42, 368, frac, col, label, val, 0.5 + i * .12 if animate else None))
         my = 296
-        body.append(f'<rect x="16" y="{my}" width="368" height="140" rx="3" fill="#04121c" stroke="url(#gold)" stroke-width="2"/>'
+        body.append(f'<rect x="16" y="{my}" width="368" height="140" rx="3" fill="url(#well)" stroke="url(#gold)" stroke-width="2"/>'
                     + text(ts, "MINIMAP: LAST 26 WEEKS", "bold", 11, 28, my + 20, INK["gold"], track=.14))
         cells, months = minimap(v, 28, my + 32, 26, 13.2, 11, animate)
         body.append(cells)
         if v["busiest"]:
-            body.append(text(ts, f"BUSIEST ON {v['busiest'].upper()}S", "bold", 11, 28, my + 130, INK["sky"], track=.12))
+            body.append(text(ts, f"BUSIEST ON {v['busiest'].upper()}S", "bold", 11, 28, my + 130, INK["gold"], track=.12))
         top = v["langs"][0][1] if v["langs"] else 1
         body.append(text(ts, "LANGUAGES BY BYTES", "bold", 11, 16, 462, INK["gold"], track=.14))
         for i, (name, frac) in enumerate(v["langs"][:4]):
