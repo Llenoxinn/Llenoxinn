@@ -194,9 +194,10 @@ STACKS = {  # same lists as lab/build_projects.py
 
 
 def tags(ts, names, x, y, room, xed, rows=2):
-    """The stack as small enamel tags, text only, wrapping onto a second row; anything past
-    that folds into +N."""
+    """The stack as small paper chips with an ink outline, text only, wrapping onto a second
+    row; anything past that folds into +N."""
     out, fs, x0, row = [], 9, x, 0
+    fill = "#FFFFFF" if not xed else "#EFE6CF"
     for k, n in enumerate(names):
         w = text_width(n, "body-bold", fs) + 11
         rest = len(names) - k - 1
@@ -204,15 +205,17 @@ def tags(ts, names, x, y, room, xed, rows=2):
             row, x, y = row + 1, x0, y + 17
         if x + w + (30 if rest and row + 1 == rows else 0) > room:
             more = f"+{len(names) - k}"
-            w = text_width(more, "body-bold", fs) + 12
-            out.append(f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="14" rx="3" fill="#C9C2AE" stroke="{INK}" stroke-width="1.6"/>'
+            w = text_width(more, "body-bold", fs) + 11
+            out.append(f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="14" rx="7" fill="#D9CDB2" stroke="{INK}" stroke-width="1.3"/>'
                        + ts.text(more, "body-bold", fs, x + 5.5, y + 10.4, INK)[0])
             break
-        out.append(f'<rect x="{f(x + 1.4)}" y="{f(y + 1.4)}" width="{f(w)}" height="14" rx="3" fill="{INK}"/>'
-                   f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="14" rx="3" fill="{C["prussian"] if not xed else C["oxblood"]}" stroke="{INK}" stroke-width="1.6"/>'
-                   + ts.text(n, "body-bold", fs, x + 5.5, y + 10.4, C["bone"])[0])
+        out.append(f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="14" rx="7" fill="{fill}" stroke="{INK}" stroke-width="1.3"/>'
+                   + ts.text(n, "body-bold", fs, x + 5.5, y + 10.4, "#2A2F44")[0])
         x += w + 4
     return "".join(out)
+
+
+ACCENTS = (C["crimson"], C["prussian"], C["phoenix"], C["gold"], "#2E8B57", "#7A4CC2", "#1F8FA0", C["ember"])
 
 
 def drawer_lamp(cx, cy, colour, animate, begin):
@@ -226,65 +229,96 @@ def drawer_lamp(cx, cy, colour, animate, begin):
     if animate:
         on = (f'<animate attributeName="opacity" values="0;1;0;1" keyTimes="0;.4;.6;.8" calcMode="discrete" dur=".5s" begin="{begin:.2f}s" fill="freeze"/>'
               f'<animate attributeName="opacity" values="1;0;1;1" keyTimes="0;.02;.05;1" calcMode="discrete" dur="6s" begin="{begin + 3:.2f}s" repeatCount="indefinite"/>')
-        out.append(f'<g opacity="0">{on}{lit}</g>')
+        out.append(f'<g opacity="1">{on}{lit}</g>')
     else:
         out.append(lit)
     out.append(f'<circle cx="{f(cx)}" cy="{f(cy)}" r="5.4" fill="none" stroke="{INK}" stroke-width="1.4"/>')
     return "".join(out)
 
 
+def xed_mess(kind, W, H, lx, ly, lw, lh, seed):
+    """One kind of damage per XED drawer, so no two neighbours look the same."""
+    if kind == "drip":
+        return kid.splat(W - 22, 14, 6, seed, drips=1, run=1.2)
+    if kind == "ring":   # a beaker was set down on the label: a stained ring
+        cx, cy = lx + lw - 6, ly + lh - 4
+        return (f'<circle cx="{f(cx)}" cy="{f(cy)}" r="12" fill="none" stroke="#6B8E23" stroke-width="3" opacity=".45"/>'
+                f'<circle cx="{f(cx + 2)}" cy="{f(cy + 1)}" r="10" fill="none" stroke="#6B8E23" stroke-width="1.2" opacity=".35"/>')
+    if kind == "crack":  # the drawer front took a hit
+        return (f'<path d="M{W - 12},{H - 34} l-8,5 l3,6 l-7,4" fill="none" stroke="{INK}" stroke-width="2"/>'
+                f'<path d="M{W - 11},{H - 33.4} l-8,5 l3,6 l-7,4" fill="none" stroke="#7C86A0" stroke-width=".9"/>')
+    if kind == "tape":   # the label tore and got taped back
+        return (f'<g transform="rotate(-28 {f(lx + lw - 16)} {f(ly + lh - 6)})"><rect x="{f(lx + lw - 34)}" y="{f(ly + lh - 13)}" width="36" height="12" '
+                f'fill="#EADFC2" opacity=".92" stroke="{INK}" stroke-width="1.4"/></g>')
+    if kind == "burn":   # a singed label corner
+        x0, y0 = lx + lw, ly + lh
+        return (f'<path d="M{f(x0 - 34)},{f(y0)} q8,-6 12,-14 q8,-2 22,0 V{f(y0)}Z" fill="#3A2412" opacity=".55"/>'
+                f'<path d="M{f(x0 - 22)},{f(y0)} q4,-4 6,-9 q6,-2 16,0 V{f(y0)}Z" fill="{INK}" opacity=".6"/>')
+    return ""
+
+
+MESS = ("drip", "ring", "crack", "tape", "burn", "drip", "ring", "crack")
+
+
 def project_card(p, theme, animate=True, order=0):
-    """A steel drawer front pulled from the lab wall, with one wide paper label slid into its
-    brass holder: the project's name and where the code lives, one line about it, and its
-    stack as small enamel tags. No pictures."""
+    """A steel drawer front in the lab's specimen cabinet. A paper index label slides out of its
+    slot between two brass rails: a colour strip down its edge (one per project), the name and
+    where the code lives, one line about it and the stack as paper chips. A pilot lamp on the
+    drawer front lights when the label lands."""
     xed = theme == "dark"
     W, H = 376, 104
     uid = f"pc{re.sub('[^a-z]', '', p['name'].lower())}{theme[0]}{int(animate)}"
     ts = Typesetter(uid)
+    accent = ACCENTS[order % len(ACCENTS)]
     s = []
     front = rpoly([(4, 6), (W - 8, 6), (W - 8, H - 8), (4, H - 8)], 7)
     s.append(f'<path d="{front}" fill="{INK}" transform="translate(4 4)"/>')
-    s.append(inked(front, "#4B5370" if not xed else "#1E2438", 3, extra=f'<path d="M4,10 H{W - 8}" stroke="#7C86A0" stroke-width="2.2" opacity=".8"/>'))
-    # brass holder and the paper label in it
-    lx, ly, lw, lh = 16, 15, W - 58, H - 31
-    s.append(f'<rect x="{lx - 3}" y="{ly - 3}" width="{lw + 6}" height="{lh + 6}" rx="3" fill="#1A1E2E"/>')   # the slot the label slides out of
-    label_at = len(s)
-    s.append(f'<rect x="{lx - 5}" y="{ly - 5}" width="{lw + 10}" height="{lh + 10}" rx="4" fill="{C["gold"]}" stroke="{INK}" stroke-width="2.4"/>'
-             f'<rect x="{lx - 5}" y="{ly + lh - 1}" width="{lw + 10}" height="6" fill="{C["gold_sh"]}"/>'
-             + bolt(lx, ly + lh / 2, 2) + bolt(lx + lw, ly + lh / 2, 2))
-    s.append(f'<rect x="{lx + 5}" y="{ly}" width="{lw - 10}" height="{lh}" fill="{C["bone"]}" stroke="{INK}" stroke-width="1.8"/>')
-    s.append(f'<path d="M{lx + lw * .7},{ly} l-14,{lh}" stroke="#FFFFFF" stroke-width="7" opacity=".3"/>')
-    s.append(ts.text(p["name"], "body-bold", 16, lx + 13, ly + 19, INK)[0])
-    # where the code lives: a lit plate on the label's top right
+    s.append(inked(front, "#4B5370" if not xed else "#1E2438", 3, extra=(
+        f'<path d="M4,10 H{W - 8}" stroke="#7C86A0" stroke-width="2.2" opacity=".8"/>'
+        f'<rect x="4" y="{H - 22}" width="{W}" height="20" fill="{INK}" opacity=".14"/>')))
+    lx, ly, lw, lh = 14, 13, W - 56, H - 27
+    # the slot and its two brass rails
+    s.append(f'<rect x="{lx - 2}" y="{ly - 2}" width="{lw + 4}" height="{lh + 4}" rx="2" fill="#141826"/>')
+    rails = (f'<rect x="{lx - 4}" y="{ly - 5}" width="{lw + 8}" height="5" rx="2" fill="{C["gold"]}" stroke="{INK}" stroke-width="1.8"/>'
+             f'<rect x="{lx - 4}" y="{ly + lh}" width="{lw + 8}" height="5" rx="2" fill="{C["gold_sh"]}" stroke="{INK}" stroke-width="1.8"/>'
+             + bolt(lx - 1, ly - 2.5, 1.6) + bolt(lx + lw + 1, ly - 2.5, 1.6) + bolt(lx - 1, ly + lh + 2.5, 1.6) + bolt(lx + lw + 1, ly + lh + 2.5, 1.6))
+    lab = [f'<rect x="{lx}" y="{ly}" width="{lw}" height="{lh}" fill="{C["bone"]}"/>',
+           f'<rect x="{lx}" y="{ly}" width="7" height="{lh}" fill="{accent}"/>',
+           f'<path d="M{lx + 7},{ly} V{ly + lh}" stroke="{INK}" stroke-width="1.4"/>',
+           f'<path d="M{lx + lw * .74},{ly} l-12,{lh}" stroke="#FFFFFF" stroke-width="6" opacity=".28"/>']
+    tx = lx + 16
+    lab.append(ts.text(p["name"], "body-bold", 17, tx, ly + 20, INK)[0])
     wtxt = p["where"].upper()
-    ww = text_width(wtxt, "body-bold", 8.4, 1) + 18
-    wx = lx + lw - 10 - ww
+    ww = text_width(wtxt, "body-bold", 8.2, 1) + 18
+    wx = lx + lw - 8 - ww
     lit = p["where"] != "private"
-    s.append(f'<rect x="{f(wx)}" y="{ly + 6}" width="{f(ww)}" height="14" rx="2" fill="#2A2F44" stroke="{INK}" stroke-width="1.6"/>'
-             f'<circle cx="{f(wx + 7.5)}" cy="{ly + 13}" r="2.6" fill="{C["spill"] if lit else "#5A1A20"}" stroke="{INK}" stroke-width="1"/>'
-             + ts.text(wtxt, "body-bold", 8.4, wx + 14, ly + 16.2, C["bone"], tracking=1)[0])
-    s.append(ts.text(p["line"], "body", 11.4, lx + 13, ly + 33, "#3A4152")[0])
-    s.append(tags(ts, STACKS[p["name"]], lx + 13, ly + 39, lx + lw - 10, xed))
-    label = "".join(s[label_at:])
-    del s[label_at:]
+    lab.append(f'<rect x="{f(wx)}" y="{ly + 7}" width="{f(ww)}" height="14" rx="2" fill="#2A2F44" stroke="{INK}" stroke-width="1.4"/>'
+               f'<circle cx="{f(wx + 7.5)}" cy="{ly + 14}" r="2.6" fill="{C["spill"] if lit else "#FF4A3A"}" stroke="{INK}" stroke-width="1"/>'
+               + ts.text(wtxt, "body-bold", 8.2, wx + 14, ly + 17, C["bone"], tracking=1)[0])
+    lab.append(ts.text(p["line"], "body", 11.4, tx, ly + 34, "#2A2F44")[0])
+    lab.append(tags(ts, STACKS[p["name"]], tx, ly + 41, lx + lw - 8, xed))
+    if xed:
+        lab.append(xed_mess(MESS[order % len(MESS)], W, H, lx, ly, lw, lh, order + 40) if MESS[order % len(MESS)] in ("ring", "tape", "burn") else "")
+    label = "".join(lab)
+    slot = rpoly([(lx, ly), (lx + lw, ly), (lx + lw, ly + lh), (lx, ly + lh)], 1)
     begin = .3 + order * .12
     if animate:  # slides out of the drawer in snapped frames, overshoots, settles
         slide = (f'<animateTransform attributeName="transform" type="translate" values="-360 0;-360 0;-230 0;-90 0;10 0;0 0" '
                  f'keyTimes="0;{begin / (begin + .4):.3f};{(begin + .1) / (begin + .4):.3f};{(begin + .2) / (begin + .4):.3f};{(begin + .3) / (begin + .4):.3f};1" '
                  f'calcMode="discrete" dur="{begin + .4:.2f}s" fill="freeze"/>')
-        slot = rpoly([(lx - 6, ly - 6), (lx + lw + 6, ly - 6), (lx + lw + 6, ly + lh + 6), (lx - 6, ly + lh + 6)], 4)
         s.append(clipped(f"sl{uid}", slot, f'<g>{slide}{label}</g>'))
     else:
-        s.append(label)
+        s.append(clipped(f"sl{uid}", slot, label))
+    s.append(f'<path d="{slot}" fill="none" stroke="{INK}" stroke-width="1.8"/>')
+    s.append(rails)
     lamp_col = C["spill"] if p["where"] != "private" else "#FF4A3A"
-    s.append(drawer_lamp(W - 25, H / 2 - 3, lamp_col, animate, begin + .45))
-    s.append(f'<rect x="{W - 31}" y="{H / 2 + 10}" width="12" height="20" rx="3" fill="{STEEL_LT}" stroke="{INK}" stroke-width="2"/>')   # drawer pull
-    if xed:
-        if len(p["name"]) % 2:
-            s.append(kid.splat(W - 22, 14, 6, len(p["name"]) + 40, drips=1, run=1.2))
+    s.append(drawer_lamp(W - 25, H / 2 - 9, lamp_col, animate, begin + .45))
+    s.append(f'<rect x="{W - 31}" y="{H / 2 + 5}" width="12" height="22" rx="3" fill="{STEEL_LT}" stroke="{INK}" stroke-width="2"/>')
+    if xed and MESS[order % len(MESS)] in ("drip", "crack"):
+        s.append(xed_mess(MESS[order % len(MESS)], W, H, lx, ly, lw, lh, order + 40))
     s.append(tooth(W, H))
-    label = f'{p["name"]}, {p["where"]} repository: {p["line"]} Built with {", ".join(STACKS[p["name"]])}.'
-    return doc(W, H, "".join(s), ts, label)
+    label_txt = f'{p["name"]}, {p["where"]} repository: {p["line"]} Built with {", ".join(STACKS[p["name"]])}.'
+    return doc(W, H, "".join(s), ts, label_txt)
 
 
 # ------------------------------------------------------------------ trophy wall
