@@ -217,6 +217,56 @@ def headphones(cx, top, s, xed):
     return f'<g transform="rotate(-8 {f(cx)} {f(top)})">{"".join(out)}</g>'
 
 
+def medal(cx, nail_y, xed, uid, animate):
+    """A gold medal on a crimson-and-gold ribbon, hung from a nail. It sways on the nail now
+    and then, in snapped frames."""
+    ribbon = (f'<path d="M{f(cx)},{f(nail_y)} L{f(cx - 13)},{f(nail_y + 30)} L{f(cx - 3)},{f(nail_y + 30)} L{f(cx + 2)},{f(nail_y + 8)}Z" fill="{C["crimson"]}" stroke="{INK}" stroke-width="2.2" stroke-linejoin="round"/>'
+              f'<path d="M{f(cx)},{f(nail_y)} L{f(cx + 13)},{f(nail_y + 30)} L{f(cx + 3)},{f(nail_y + 30)} L{f(cx - 2)},{f(nail_y + 8)}Z" fill="{C["gold"]}" stroke="{INK}" stroke-width="2.2" stroke-linejoin="round"/>')
+    my, r = nail_y + 46, 17
+    star = " ".join(f"{f(cx + math.cos(-math.pi / 2 + k * math.pi / 5) * (r * .62 if k % 2 == 0 else r * .26))},"
+                    f"{f(my + math.sin(-math.pi / 2 + k * math.pi / 5) * (r * .62 if k % 2 == 0 else r * .26))}" for k in range(10))
+    disc = (f'<circle cx="{f(cx)}" cy="{f(my)}" r="{r + 3}" fill="{INK}"/>'
+            f'<circle cx="{f(cx)}" cy="{f(my)}" r="{r}" fill="{C["gold"]}"/>'
+            f'<path d="M{f(cx - r)},{f(my)} A{r},{r} 0 0 0 {f(cx + r)},{f(my)}Z" fill="{C["gold_sh"]}"/>'
+            f'<circle cx="{f(cx)}" cy="{f(my)}" r="{f(r * .78)}" fill="none" stroke="{C["gold_dk"]}" stroke-width="1.8"/>'
+            f'<polygon points="{star}" fill="{C["glint"]}" stroke="{C["gold_dk"]}" stroke-width="1.4" stroke-linejoin="round"/>'
+            + fold([(cx - r * .7, my - r * .3), (cx - r * .4, my - r * .72), (cx + r * .05, my - r * .82)], 2.4, "#FFFFFF")
+            + f'<rect x="{f(cx - 5)}" y="{f(nail_y + 27)}" width="10" height="5" rx="1.5" fill="{C["gold_dk"]}" stroke="{INK}" stroke-width="1.8"/>')
+    body = ribbon + disc
+    if animate:
+        vals = ";".join(f"{a} {f(cx)} {f(nail_y)}" for a in (0, 0, 7, -5, 3, -1.5, 0))
+        body = (f'<g><animateTransform attributeName="transform" type="rotate" values="{vals}" keyTimes="0;.7;.74;.78;.82;.86;.9" '
+                f'calcMode="discrete" dur="6.5s" begin="1.2s" repeatCount="indefinite"/>{body}</g>')
+    nail = (f'<circle cx="{f(cx)}" cy="{f(nail_y)}" r="3.6" fill="#C9D0DE" stroke="{INK}" stroke-width="2"/>')
+    return body + nail
+
+
+def award_wall(ts, x, y, room, award, xed, uid, animate):
+    """The win, hung on the wall: a medal on a nail beside an engraved brass plaque in a wood
+    frame, screwed on at the corners."""
+    title, where = award
+    px = x + 44
+    tw = max(text_width(title, "body-bold", 14), text_width(where, "body-bold", 9.2)) + 44
+    pw, ph = min(tw, room - 40), 54
+    wood = rpoly([(px, y + 4), (px + pw, y + 4), (px + pw, y + 4 + ph), (px, y + 4 + ph)], 5)
+    brass = rpoly([(px + 7, y + 11), (px + pw - 7, y + 11), (px + pw - 7, y + ph - 3), (px + 7, y + ph - 3)], 2)
+    engraved = "#5A3A10"
+    out = [f'<path d="{wood}" fill="{INK}" transform="translate(4 4)"/>',
+           inked(wood, "#7A4524" if not xed else "#4A2A18", 2.6, extra=fold([(px + 6, y + 8), (px + pw * .6, y + 8)], 2, "#A8693E")),
+           f'<g filter="url(#grain)"><path d="{brass}" fill="{C["gold"]}"/></g>',
+           clipped(f"br{uid}", brass, f'<path d="M{f(px + pw * .55)},{f(y)} h18 l-30,{ph + 10} h-18z" fill="#FFFFFF" opacity=".28"/>'
+                                     f'<rect x="{f(px)}" y="{f(y + ph - 14)}" width="{f(pw)}" height="14" fill="{C["gold_sh"]}" opacity=".6"/>'),
+           f'<path d="{brass}" fill="none" stroke="{INK}" stroke-width="2"/>',
+           ts.text(title, "body-bold", 14, px + pw / 2, y + 32, engraved, anchor="middle")[0],
+           ts.text(where, "body-bold", 9.2, px + pw / 2, y + 47, engraved, anchor="middle", attrs=' opacity=".85"')[0]]
+    for sx_, sy_ in ((px + 12, y + ph / 2 + 4), (px + pw - 12, y + ph / 2 + 4)):
+        out.append(f'<circle cx="{f(sx_)}" cy="{f(sy_)}" r="2.4" fill="{C["gold_dk"]}" stroke="{INK}" stroke-width="1.2"/>')
+    out.append(medal(x + 18, y + 2, xed, uid, animate))
+    if xed:  # a scorch licks the plaque's corner
+        out.append(f'<path d="M{f(px + pw - 4)},{f(y + 6)} q-24,4 -30,22 q14,-8 30,-4z" fill="{INK}" opacity=".45"/>')
+    return "".join(out)
+
+
 def lab_wall(x, y, w, h, xed):
     wall, seam = (C["prussian"], C["navy"]) if not xed else ("#0E1A3A", "#070C1E")
     out = [f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="{f(h)}" fill="{wall}"/>']
@@ -420,10 +470,10 @@ def feature(theme, layout="wide", animate=True):
         W, H = 760, 340
         floor = 292
         ax0, ax1, atop = 44, 304, 34
-        tx, tw, ty = 352, 320, 40
+        tx, tw, ty = 352, 320, 28
         tank_c = (-40, -40, 150)
         pipe_x = W - 42
-        lamp_x = 540
+        lamp_x = 640
     else:
         W, H = 400, 720
         floor = 676
@@ -487,15 +537,9 @@ def feature(theme, layout="wide", animate=True):
         sc.append(ts.text(ln, "body-bold", 16, tx, yy, P["muted"])[0])
         yy += 22
     ry = yy + 4
-    rw = min(tw, text_width(p["award"][0], "body-bold", 15.5) + 62)
-    rib = f"M{f(tx)},{f(ry)} H{f(tx + rw)} l-12,17 l12,17 H{f(tx)} l10,-17z"
-    sc.append(f'<path d="{rib}" fill="{INK}" transform="translate(4 4)"/>' + inked(rib, C["gold"], 2.6,
-              extra=f'<path d="M{f(tx)},{f(ry + 22)} H{f(tx + rw)} V{f(ry + 40)} H{f(tx)}Z" fill="{C["gold_sh"]}"/>'))
-    sc.append(ts.text(p["award"][0], "body-bold", 15.5, tx + 30, ry + 23, INK)[0])
-    sc.append(pushpin(tx + 14, ry + 17))
-    sc.append(ts.text(p["award"][1], "body", 13, tx, ry + 56, P["muted"])[0])
+    sc.append(award_wall(ts, tx, ry, tw, p["award"], xed, uid, animate))
     # the stack: reagent bottles on a shelf bolted to the wall
-    sy = ry + 118
+    sy = ry + 126
     rows = [p["stack"]] if wide else [p["stack"][:4], p["stack"][4:]]
     for i, row in enumerate(rows):
         y_ = sy + i * 70
