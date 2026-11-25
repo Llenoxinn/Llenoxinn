@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 import kid
+import letters as hand
 from notebook import ASSETS, ROOT, Typesetter, frames, svg_doc
 from toon import INK, PHOENIX as C, clipped, defs as toon_defs, f, fold, inked, limb, rpoly, smooth
 
@@ -211,32 +212,7 @@ def shelf(L, xed, uid, animate):
 
 # ------------------------------------------------------------------ gold blocks
 
-BLOCK_FACE = dict(face="block", size=.66, base=.36, track=0)
-
-
-def letters(ts, word, cx, cy, w, h, toward, uid):
-    """Raised cast-gold letters: an ink-rimmed stepped extrusion that recedes the same way
-    as the block, a dark-gold body, a bright face and a hard glint on each letter's top edge."""
-    from notebook import text_width
-    F = BLOCK_FACE
-    size = min(h * F["size"], w * .82 * 100 / text_width(word, F["face"], 100, F["track"] * 100))  # fit the face
-    base = cy + size * F["base"]
-    depth = max(3, int(size * .09))
-    ex, ey = toward * .9, .9
-    rim = f' stroke="{INK}" stroke-width="{f(size * .13)}" stroke-linejoin="round" paint-order="stroke"'
-    out = [ts.text(word, F["face"], size, cx + ex * depth, base + ey * depth, INK, anchor="middle", tracking=F["track"], attrs=rim)[0]]
-    for i in range(depth, 0, -1):
-        out.append(ts.text(word, F["face"], size, cx + ex * i, base + ey * i, C["gold_dk"], anchor="middle", tracking=F["track"])[0])
-    out.append(ts.text(word, F["face"], size, cx, base, C["glint"], anchor="middle", tracking=F["track"],
-                       attrs=f' stroke="{INK}" stroke-width="{f(size * .05)}" stroke-linejoin="round" paint-order="stroke"')[0])
-    # top-edge glint: the face again, clipped to its upper third, in white
-    out.append(f'<g clip-path="url(#tg{uid})" opacity=".55">'
-               f'{ts.text(word, F["face"], size, cx, base, "#FFFFFF", anchor="middle", tracking=F["track"])[0]}</g>')
-    clip = f'<clipPath id="tg{uid}"><rect x="{f(cx - size * 3)}" y="{f(base - size * .78)}" width="{f(size * 6)}" height="{f(size * .2)}"/></clipPath>'
-    return clip + "".join(out)
-
-
-def block(ts, cx, cy, w, h, word, toward, uid):
+def block(ts, cx, cy, w, h, word, toward, uid, xed=False):
     """A gold block worn as a gauntlet. `toward` is +1 when the depth recedes to the right."""
     dx, dy = toward * w * .13, -h * .2
     x, y = cx - w / 2, cy - h / 2
@@ -254,7 +230,11 @@ def block(ts, cx, cy, w, h, word, toward, uid):
              f'<path d="M{f(x + w * .12)},{f(y + h)} L{f(x + w * .3)},{f(y)} H{f(x + w * .4)} L{f(x + w * .22)},{f(y + h)}Z" fill="#FFFFFF" opacity=".3"/>'
              f'<path d="M{f(x + w * .46)},{f(y + h)} L{f(x + w * .64)},{f(y)} H{f(x + w * .68)} L{f(x + w * .5)},{f(y + h)}Z" fill="#FFFFFF" opacity=".22"/>')
     s.append(f'<g filter="url(#grain)"><path d="{front}" fill="{C["gold"]}"/>{clipped(f"bf{uid}", front, shine)}</g>')
-    s.append(letters(ts, word, cx, cy, w, h, toward, uid))
+    # hand-drawn cartoon letters: pale gold for DEXTER, crimson enamel for XED
+    lh = min(h * .62, w * .84 / (sum(hand.GLYPHS[c][0] for c in word) + hand.GAP * (len(word) - 1)) * 100)
+    enamel = dict(face=C["crimson"], side=C["crimson_dk"], under=C["oxblood"]) if xed else {}
+    s.append(hand.word(word, cx - toward * 2, cy + 1, lh, (toward * lh * .06, lh * .06), cut="toon", seed=3 if word == "DEX" else 4,
+                       uid=uid, **enamel))
     s.append(f'<path d="{front}" fill="none" stroke="{INK}" stroke-width="5" stroke-linejoin="round"/>')
     return "".join(s), front
 
@@ -495,9 +475,9 @@ def hero(theme, animate, layout, plate_only=False):
     # blocks
     (lx, ly), (rx, ry) = L["blocks"]
     bw, bh = L["block"]
-    dex, dex_front = block(ts, lx, ly, bw, bh, "DEX", 1, uid + "l")
+    dex, dex_front = block(ts, lx, ly, bw, bh, "DEX", 1, uid + "l", xed)
     ter_y = ry + (bh * .22 if xed else 0)
-    ter, ter_front = block(ts, rx, ter_y, bw, bh, "TER", -1, uid + "r")
+    ter, ter_front = block(ts, rx, ter_y, bw, bh, "TER", -1, uid + "r", xed)
     if not xed:
         if animate:
             dex += glint(dex_front, uid + "l", lx - bw / 2, bw, bh, ly, 1.4)
@@ -523,7 +503,7 @@ def hero(theme, animate, layout, plate_only=False):
     lx_, ly_, lsize, lanchor = L["line"]
     ly_ += L["line_xed"] if xed else 0   # XED's sign hangs lower on its broken side
     s.append(ts.text(LINE[theme], "body-bold", lsize, lx_, ly_, P["text"], anchor=lanchor,
-                     attrs=f' stroke="{INK}" stroke-width="{f(lsize * .22)}" stroke-linejoin="round" paint-order="stroke"')[0])
+                     attrs=f' stroke="{INK}" stroke-width="{f(lsize * .15)}" stroke-linejoin="round" paint-order="stroke"')[0])
     # paper tooth over everything, then the frame
     s.append(f'<rect width="{w}" height="{h}" filter="url(#paper)" opacity=".45"/>')
     body = f'<defs>{toon_defs()}</defs>{ts.defs_svg()}' + "".join(s)

@@ -22,7 +22,7 @@ Dexter Juevesano's (@Llenoxinn) GitHub profile, drawn as a cartoon lab in the la
 
 - Palette, ink and texture live in `lab/toon.py` (`PHOENIX`): bone, prussian/navy, crimson/oxblood, phoenix orange, gold, and acid spill `#A6FF2E`. Gold is the shared mark of both themes. Keep data-semantic LeetCode difficulty colours.
 - Ink: near-black union outlines (an ink copy stroked at 2x under the fill), tapered `fold()` slivers for interior marks, one hard cel step per form, the `grain` filter gathered at fill edges, `paper` tooth over each scene.
-- Type is outlined at build time from `lab/fonts` (`FACES` in `notebook.py`): Creepster for the wordmark and headers, Luckiest Guy on the gold blocks (to be replaced by hand-drawn letters), Chakra Petch for text and all digits.
+- Type is outlined at build time from `lab/fonts` (`FACES` in `notebook.py`): Creepster for the wordmark and headers, no font on the gold blocks: their DEX/TER letters are drawn by hand in `lab/letters.py` (pale gold for DEXTER, crimson enamel for XED), Chakra Petch for text and all digits.
 - Every object is grounded: it stands on a shelf, bench or console, hangs from a nail or chain, is screwed or bolted on, or plugs into something. No floating boxes or lines.
 - XED's mess (spill, scorch, cracks, tape) goes on frames, corners and walls, never over a name, number or tag. Vary it card to card.
 - Project cards have no pictures: name, where the code lives, one line, the full stack as text chips. Only the featured project (the first in `panels.FEATURE`) gets a painted scene.
