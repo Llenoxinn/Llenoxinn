@@ -1,20 +1,41 @@
-# dexterslab: repository notes
+# DEXTER / XED: repository notes
 
-Dexter Juevesano's (@Llenoxinn) GitHub profile, drawn in the language of the live portfolio (dexterslab-dev.vercel.app): DOS blue, paper and lavender; a pixel lab at night for the hero; "lab sheets" for cards (torn pixel edges, notched square corners, a hard offset shadow, no rounded bezels); Pixelify Sans for words in tags and the wordmark, Chakra Petch for text and all digits, Inter Bold for titles. Every section of the README is drawn by `lab/`. The Nov 2026 redesign replaced the Notion-style cards (terminal strips, typed commands, `[S] /dev` paths) after they were copied; do not bring those back.
+Dexter Juevesano's (@Llenoxinn) GitHub profile, drawn as a cartoon lab in the late-90s TV-cartoon style. The light theme is **DEXTER** ("I build things that ship."); the dark theme is **XED** ("I break things to see how they work."), the same lab after hours, wrecked and spilling. GitHub's theme setting decides who a visitor meets. Both themes show the same facts and links; only art, palette, texture and captions differ. Every section of the README is drawn by `lab/`. Two earlier designs (Notion cards, then DOS-blue pixel lab sheets) were copied; never bring either back, nor pixel art.
 
 ## Ground rules
 
-- Never hand-edit generated `assets/`; change the generator and rerun it.
+- Never hand-edit generated `assets/`; change the generator and rerun it. `lab/build_lab.py` writes `README.md` too.
 - README blocks between `<!-- NAME:START -->` and `<!-- NAME:END -->` belong to their generators. Preserve all five pairs: `STACK`, `PROJECTS`, `CONTRIBUTIONS`, `LEETCODE`, `ASSAY`. Section order: hero, projects, trophies, stack, readings, contact.
-- No Markdown headings: GitHub draws rule lines under them. Section headers are images from `build_headers.py`, wrapped in `<h3>` for structure.
-- Brief copy in plain sentences, in Dexter's voice. One short line per element; no paragraphs, no copying the portfolio's text word for word. No middle-dot strings (`A · B · C`), no `CS @` shorthand, no locale or time-zone strips.
-- Facts are real. No invented stats, solves, proficiency percentages, roles, proof URLs or tools. Private repos are labelled, never linked.
-- Palette, card tokens and fonts live in `lab/notebook.py` (`BRAND`, `PAPER`, `FACES`, `TRACK`; `sheet()`, `box()`, `reading()`). Keep data-semantic difficulty and CTF category colours. Pixelify's 2, 5 and B misread at small sizes: never set digits in it.
-- Every visual ships as `-dark` and `-light`. Anything that loops (hero, section headers, featured sheet, project cards, trophy shelf, live and contact cards) also ships a `-still` twin that `<picture>` serves under `prefers-reduced-motion`; the hero adds `banner-narrow-*` for screens up to 600 px.
-- Motion is stepped, like a sprite, and every piece has one job. Sheets feed in behind an ease-out moving neon/paper print-head line with a pixel-dithered trailing fringe (`print_line_reveal`), and the hero wordmark sweeps in behind a matching horizontal scanline (`scan_reveal_x`); semantic chunks settle into place with a crisp 2-step upward nudge (`nudge_in`); numbers race up and settle with their unit travelling beside them (`count_up`); header rules draw in once; the heatmap lands along diagonals. Loops act rather than tick: sprites follow a rhythm (`flip` / `frames`: the scientist waves three times then rests, the coil crackles unevenly, the monitor scrolls a 12-step phosphor ECG trace, flask bubbles climb, 16×16 trophies and medal catch a shelf-edge light runner with a lift + 3-step sheen + dual sparkles + spotlight motes, each project's 28×28 double-bezel pixel illustration plays a bespoke domain micro-loop, and the three live cards run a staggered scanner/VU/microplate wave inside recessed trays with notched source badges instead of blinking LEDs). Project status lights stay still. No fades, typing or travelling packets. The finished frame is always the base value, so non-SMIL renderers show it. Use outlined text, no fonts or icons fetched at render time, no SVG scripts; animation is SMIL.
-- Layout: below the full-width hero, everything sits on one 760 px column (`COLUMN` in `notebook.py`): two 376 cards or three 252 cards per row, and full-column pieces displayed at `width="760"`. Full-column pieces (section headers, the featured project sheet, the trophy shelf) also ship a 400 px phone layout served under `(max-width: 600px)` via `wide_scene()`. Fixed sizes: stack tiles 48 px; project (376 × 104) and contact (376 × 92) cards; live cards 252 × 188.
-- Hierarchy: the first project in `PROJECTS` is the featured sheet (big pixel art, story, award band, full stack); the rest are cards. Results all stand on one trophy shelf (`WINS` in `build_headers.py`; `award` is `hack`, `medal`, or `ctf`).
-- Sprites come from the portfolio's `lib/pixel-art.ts` (copied into `lab/pixel.py`).
+- No Markdown headings: GitHub draws rule lines under them. Section headers are images, wrapped in `<h3>`.
+- XED renames the sections: Projects → Experiments, Trophies → Loot, Stack → Chemicals, Readings → Vitals, Contact → Signal (`TITLES` in `panels.py`). Header lines are (DEXTER, XED) pairs in `rooms.LINES`.
+- Brief copy in plain sentences, in Dexter's voice. One short line per element. No middle-dot strings (`A · B · C`), no `CS @` shorthand, no locale or time-zone strips.
+- Facts are real. No invented stats, solves, roles, proof URLs or tools. Private repos are labelled, never linked.
+
+## The character
+
+- Dexter himself, in the show's cartoon construction: black warrior cut (spiky top, chunky fringe), thick half-rim browline glasses, crimson welding gauntlets, rolled-sleeve bone lab coat with a phoenix patch (`lab/kid.py`).
+- Never the show's character or cast: no orange hair, no purple gloves, no pale-blue rectangle lenses, no show names or logos.
+- XED: one brow cocked, wide grin, one lens spider-webbed and the other blown out, bridge taped, fringe smoking, spill on coat, sleeve, gauntlet and cheek, lit from below by fire.
+- Hero: DEXTER punches the gold DEX and TER blocks forward; XED turns the DEX block over so it reads XED, and every few seconds it turns back and snaps over again in stepped frames.
+
+## Look
+
+- Palette, ink and texture live in `lab/toon.py` (`PHOENIX`): bone, prussian/navy, crimson/oxblood, phoenix orange, gold, and acid spill `#A6FF2E`. Gold is the shared mark of both themes. Keep data-semantic LeetCode difficulty colours.
+- Ink: near-black union outlines (an ink copy stroked at 2x under the fill), tapered `fold()` slivers for interior marks, one hard cel step per form, the `grain` filter gathered at fill edges, `paper` tooth over each scene.
+- Type is outlined at build time from `lab/fonts` (`FACES` in `notebook.py`): Creepster for the wordmark and headers, Luckiest Guy on the gold blocks (to be replaced by hand-drawn letters), Chakra Petch for text and all digits.
+- Every object is grounded: it stands on a shelf, bench or console, hangs from a nail or chain, is screwed or bolted on, or plugs into something. No floating boxes or lines.
+- XED's mess (spill, scorch, cracks, tape) goes on frames, corners and walls, never over a name, number or tag. Vary it card to card.
+- Project cards have no pictures: name, where the code lives, one line, the full stack as text chips. Only the featured project (the first in `panels.FEATURE`) gets a painted scene.
+
+## Motion
+
+- SMIL only, stepped like cartoon timing on twos: snaps, holds and small overshoots. No fades, typing, easing or travelling packets.
+- The finished frame is always the base value, so non-SMIL renderers show it. Outlined text only, no fonts or icons fetched at render time, no SVG scripts.
+- Every visual ships `-dark` and `-light`. Anything that moves also ships a `-still` twin that `<picture>` serves under `prefers-reduced-motion`. Full-column pieces (hero, headers, featured scene, trophy wall, stack cabinet) also ship `-narrow` for screens up to 600 px. `check_profile.py` enforces the still twins.
+
+## Layout
+
+Below the full-width hero, everything sits on one 760 px column: two 376 cards per row (projects, contact) or three 252 × 300 console tiles; full-column pieces display at `width="760"`. Fixed sizes: project 376 × 104, contact 376 × 92.
 
 ## Check changes
 
@@ -24,8 +45,8 @@ python lab/build_assay.py
 python lab/check_profile.py
 ```
 
-Preview light/dark and narrow/wide GitHub-style layouts in Chromium with the viewport grown to the page height (SMIL runs only on screen). Verify each image loads and that the page has no horizontal overflow. See `lab/README.md` for data commands and font licenses.
+Preview light/dark and narrow/wide GitHub-style layouts in Chromium, scrolling through the page (SMIL runs only on screen). Verify each image loads and that the page has no horizontal overflow. See `lab/README.md` for what draws what and font licenses.
 
 ## Workflow
 
-Lab rounds run hourly at :37 and redraw the contributions and LeetCode cards; edits to `lab/data/picoctf.json` redraw the picoGym card immediately. A commit happens only when a number changes. Optional secret `LAB_TOKEN` includes private contributions. The portfolio content file is the source for real CTF results and contact details.
+Lab rounds run hourly at :37: `vitals.py` and `leetcode.py` save their readings to `lab/data/github.json` and `lab/data/leetcode.json` and redraw only their console tile; edits to `lab/data/picoctf.json` redraw the picoGym rack immediately. A commit happens only when a number changes. Optional secret `LAB_TOKEN` includes private contributions. The portfolio content file is the source for real CTF results and contact details.
