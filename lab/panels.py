@@ -247,7 +247,8 @@ def award_wall(ts, x, y, room, award, xed, uid, animate):
     title, where = award
     px = x + 44
     tw = max(text_width(title, "body-bold", 14), text_width(where, "body-bold", 9.2)) + 44
-    pw, ph = min(tw, room - 40), 54
+    pw, ph = min(tw, room - 40), 66
+    band = 24   # height of the darker engraved strip at the bottom of the brass
     wood = rpoly([(px, y + 4), (px + pw, y + 4), (px + pw, y + 4 + ph), (px, y + 4 + ph)], 5)
     brass = rpoly([(px + 7, y + 11), (px + pw - 7, y + 11), (px + pw - 7, y + ph - 3), (px + 7, y + ph - 3)], 2)
     engraved = "#5A3A10"
@@ -255,13 +256,14 @@ def award_wall(ts, x, y, room, award, xed, uid, animate):
            inked(wood, "#7A4524" if not xed else "#4A2A18", 2.6, extra=fold([(px + 6, y + 8), (px + pw * .6, y + 8)], 2, "#A8693E")),
            f'<g filter="url(#grain)"><path d="{brass}" fill="{C["gold"]}"/></g>',
            clipped(f"br{uid}", brass, f'<path d="M{f(px + pw * .55)},{f(y)} h18 l-30,{ph + 10} h-18z" fill="#FFFFFF" opacity=".28"/>'
-                                     f'<rect x="{f(px)}" y="{f(y + ph - 14)}" width="{f(pw)}" height="14" fill="{C["gold_sh"]}" opacity=".6"/>'),
+                                     f'<rect x="{f(px)}" y="{f(y + ph - 3 - band)}" width="{f(pw)}" height="{band}" fill="{C["gold_sh"]}" opacity=".75"/>'
+                                     f'<path d="M{f(px)},{f(y + ph - 3 - band)} H{f(px + pw)}" stroke="{C["gold_dk"]}" stroke-width="1.4"/>'),
            f'<path d="{brass}" fill="none" stroke="{INK}" stroke-width="2"/>',
-           ts.text(title, "body-bold", 14, px + pw / 2, y + 32, engraved, anchor="middle")[0],
-           ts.text(where, "body-bold", 9.2, px + pw / 2, y + 47, engraved, anchor="middle", attrs=' opacity=".85"')[0]]
-    for sx_, sy_ in ((px + 12, y + ph / 2 + 4), (px + pw - 12, y + ph / 2 + 4)):
+           ts.text(title, "body-bold", 14, px + pw / 2, y + 11 + (ph - 14 - band) / 2 + 5, engraved, anchor="middle")[0],
+           ts.text(where, "body-bold", 9.6, px + pw / 2, y + ph - 3 - band / 2 + 3.4, engraved, anchor="middle")[0]]
+    for sx_, sy_ in ((px + 12, y + 11 + (ph - 14 - band) / 2), (px + pw - 12, y + 11 + (ph - 14 - band) / 2)):
         out.append(f'<circle cx="{f(sx_)}" cy="{f(sy_)}" r="2.4" fill="{C["gold_dk"]}" stroke="{INK}" stroke-width="1.2"/>')
-    out.append(medal(x + 18, y + 2, xed, uid, animate))
+    out.append(medal(x + 18, y + 6, xed, uid, animate))
     if xed:  # a scorch licks the plaque's corner
         out.append(f'<path d="M{f(px + pw - 4)},{f(y + 6)} q-24,4 -30,22 q14,-8 30,-4z" fill="{INK}" opacity=".45"/>')
     return "".join(out)
@@ -539,7 +541,7 @@ def feature(theme, layout="wide", animate=True):
     ry = yy + 4
     sc.append(award_wall(ts, tx, ry, tw, p["award"], xed, uid, animate))
     # the stack: reagent bottles on a shelf bolted to the wall
-    sy = ry + 126
+    sy = ry + 136
     rows = [p["stack"]] if wide else [p["stack"][:4], p["stack"][4:]]
     for i, row in enumerate(rows):
         y_ = sy + i * 70
