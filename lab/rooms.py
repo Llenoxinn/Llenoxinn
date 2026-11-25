@@ -12,7 +12,7 @@ import re
 
 import kid
 from notebook import ROOT, Typesetter, svg_doc, text_width, wrap
-from panels import (THEME, bottles, desk, lab_wall, monitor, scorch, shelf, stepped_count)
+from panels import THEME, lab_wall, scorch, shelf
 from toon import INK, PHOENIX as C, clipped, defs as toon_defs, f, fold, inked, rpoly, smooth
 
 STEEL, STEEL_DK, STEEL_LT = "#5B6478", "#3A4152", "#9AA3B8"
@@ -46,7 +46,7 @@ def brass_plate(ts, x, y, w, h, lines, uid):
 
 # ------------------------------------------------------------------ section header copy
 
-LINES = {
+LINES = {  # header lines: (DEXTER, XED)
     "projects": ("Web apps, 3D visualizers, a CTF platform and a tower defense game.",
                  "Web apps, 3D toys, a CTF arena and a tower defense game. Most survived."),
     "wins": ("Wins and placements from hackathons and CTFs.", "Things I broke well enough to win."),
@@ -76,109 +76,6 @@ PROJECTS = [
     dict(name="PhyTree", repo=None, prop="tree",
          line="Build and trace phylogenetic trees.", where="private"),
 ]
-
-
-def prop_art(kind, cx, base, xed, animate, uid):
-    """The project's object, standing on the drawer's little shelf at `base`."""
-    o = []
-    if kind == "flag":   # a flag on a pole planted in a sandbag
-        o.append(inked(rpoly([(cx - 20, base - 12), (cx + 20, base - 12), (cx + 22, base + 2), (cx - 22, base + 2)], 6), "#C9A66B", 2.4))
-        o.append(f'<path d="M{f(cx - 4)},{f(base - 10)} V{f(base - 64)}" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>'
-                 f'<path d="M{f(cx - 4)},{f(base - 10)} V{f(base - 64)}" stroke="{STEEL_LT}" stroke-width="2.4" stroke-linecap="round"/>')
-        flag_a = f'<path d="M{f(cx - 2)},{f(base - 62)} q14,-6 28,0 q-4,10 0,20 q-14,-6 -28,0z" fill="{C["crimson"]}" stroke="{INK}" stroke-width="2.4" stroke-linejoin="round"/>'
-        flag_b = f'<path d="M{f(cx - 2)},{f(base - 62)} q14,6 28,0 q4,10 0,20 q-14,6 -28,0z" fill="{C["crimson"]}" stroke="{INK}" stroke-width="2.4" stroke-linejoin="round"/>'
-        o.append(two_frame(flag_a, flag_b, animate, 1.0))
-    elif kind == "cap":  # a graduation cap on a stack of two books
-        for i, col in enumerate((C["prussian"], C["crimson"])):
-            y = base - 10 - i * 11
-            o.append(inked(rpoly([(cx - 24 + i * 3, y), (cx + 24 - i * 3, y), (cx + 24 - i * 3, y + 11), (cx - 24 + i * 3, y + 11)], 2), col, 2.2,
-                           extra=f'<rect x="{f(cx + 10)}" y="{f(y)}" width="20" height="12" fill="{C["bone"]}"/>'))
-        y = base - 32
-        o.append(inked(f"M{f(cx - 12)},{f(y - 2)} v-8 h24 v8 q-12,6 -24,0z", INK, 1.6))
-        o.append(f'<path d="M{f(cx - 28)},{f(y - 12)} L{f(cx)},{f(y - 22)} L{f(cx + 28)},{f(y - 12)} L{f(cx)},{f(y - 2)}Z" fill="#1E2230" stroke="{INK}" stroke-width="2.4" stroke-linejoin="round"/>')
-        o.append(f'<path d="M{f(cx)},{f(y - 12)} Q{f(cx + 18)},{f(y - 10)} {f(cx + 20)},{f(y + 4)}" fill="none" stroke="{C["gold"]}" stroke-width="2.4"/><circle cx="{f(cx + 20)}" cy="{f(y + 6)}" r="3" fill="{C["gold"]}" stroke="{INK}" stroke-width="1.4"/>')
-    elif kind == "photos":  # an ID photo sheet clipped to a little easel
-        o.append(f'<path d="M{f(cx - 18)},{f(base + 1)} L{f(cx - 6)},{f(base - 60)} M{f(cx + 18)},{f(base + 1)} L{f(cx + 6)},{f(base - 60)}" stroke="{INK}" stroke-width="5" stroke-linecap="round"/>'
-                 f'<path d="M{f(cx - 18)},{f(base + 1)} L{f(cx - 6)},{f(base - 60)} M{f(cx + 18)},{f(base + 1)} L{f(cx + 6)},{f(base - 60)}" stroke="#A8693E" stroke-width="2" stroke-linecap="round"/>')
-        sheet = rpoly([(cx - 22, base - 58), (cx + 22, base - 58), (cx + 22, base - 14), (cx - 22, base - 14)], 2)
-        o.append(inked(sheet, "#FFFFFF", 2.2))
-        for i in range(2):
-            for j in range(2):
-                px, py = cx - 17 + i * 18, base - 53 + j * 20
-                o.append(f'<rect x="{f(px)}" y="{f(py)}" width="15" height="17" fill="#8FD3FF" stroke="{INK}" stroke-width="1.2"/>'
-                         f'<circle cx="{f(px + 7.5)}" cy="{f(py + 7)}" r="3.4" fill="#E3AD84"/><path d="M{f(px + 2)},{f(py + 17)} q5.5,-7 11,0z" fill="{C["prussian"]}"/>')
-        o.append(f'<rect x="{f(cx - 6)}" y="{f(base - 63)}" width="12" height="8" rx="2" fill="{STEEL_LT}" stroke="{INK}" stroke-width="1.8"/>')
-    elif kind == "collatz":  # a stepped ladder of number tiles falling to 1
-        seq = [7, 22, 11, 34, 17, 52, 26, 13, 40, 20, 10, 5, 16, 8, 4, 2, 1]
-        pts = [(cx - 34 + i * 4.2, base - 8 - math.log(v + 1) * 13) for i, v in enumerate(seq)]
-        o.append(f'<rect x="{f(cx - 40)}" y="{f(base - 70)}" width="80" height="66" rx="4" fill="#1E2436" stroke="{INK}" stroke-width="2.6"/>')
-        o.append(f'<path d="M{f(cx - 38)},{f(base - 4)} V{f(base + 2)} M{f(cx + 38)},{f(base - 4)} V{f(base + 2)}" stroke="{INK}" stroke-width="4"/>')
-        d = "M" + " L".join(f"{f(x)},{f(y)}" for x, y in pts)
-        line = f'<path d="{d}" fill="none" stroke="{C["gold"]}" stroke-width="2.4" stroke-linejoin="round"/>'
-        o.append(reveal_path(line, cx - 40, base - 70, 80, 66, animate, uid))
-        o.append(f'<circle cx="{f(pts[-1][0])}" cy="{f(pts[-1][1])}" r="3.4" fill="{C["spill"]}" stroke="{INK}" stroke-width="1.6"/>')
-    elif kind == "helix":  # a double helix model in a specimen jar
-        jar = rpoly([(cx - 20, base - 62), (cx + 20, base - 62), (cx + 22, base + 2), (cx - 22, base + 2)], 8)
-        o.append(inked(jar, "#CFE6EA", 2.4, extra=f'<rect x="{f(cx - 30)}" y="{f(base - 40)}" width="60" height="50" fill="#BDE6C8" opacity=".6"/>'))
-        for k in range(9):
-            y = base - 54 + k * 6
-            dx = math.sin(k * .8) * 12
-            o.append(f'<path d="M{f(cx - dx)},{f(y)} L{f(cx + dx)},{f(y)}" stroke="{INK}" stroke-width="1.4"/>'
-                     f'<circle cx="{f(cx - dx)}" cy="{f(y)}" r="2.8" fill="{C["crimson"]}" stroke="{INK}" stroke-width="1.2"/>'
-                     f'<circle cx="{f(cx + dx)}" cy="{f(y)}" r="2.8" fill="{C["gold"]}" stroke="{INK}" stroke-width="1.2"/>')
-        o.append(f'<rect x="{f(cx - 22)}" y="{f(base - 70)}" width="44" height="9" rx="3" fill="{STEEL}" stroke="{INK}" stroke-width="2.2"/>')
-        o.append(fold([(cx - 14, base - 56), (cx - 15, base - 18)], 2.6, "#FFFFFF"))
-    elif kind == "scope":  # an oscilloscope drawing a Lissajous curve
-        o.append(inked(rpoly([(cx - 34, base - 58), (cx + 34, base - 58), (cx + 34, base + 1), (cx - 34, base + 1)], 5), "#C9C2AE" if not xed else "#4A4F63", 2.6))
-        o.append(f'<rect x="{f(cx - 28)}" y="{f(base - 52)}" width="40" height="40" rx="5" fill="#071019" stroke="{INK}" stroke-width="2"/>')
-        liss = "M" + " L".join(f"{f(cx - 8 + math.sin(3 * a + .6) * 15)},{f(base - 32 + math.sin(2 * a) * 15)}" for a in [k / 60 * math.tau for k in range(61)])
-        o.append(f'<path d="{liss}" fill="none" stroke="{C["spill"]}" stroke-width="1.8"/>')
-        for i in range(3):
-            o.append(f'<circle cx="{f(cx + 24)}" cy="{f(base - 46 + i * 14)}" r="3.6" fill="{STEEL_LT}" stroke="{INK}" stroke-width="1.6"/>')
-    elif kind == "orbit":  # a sun on a stand with a tower riding its ring
-        o.append(f'<path d="M{f(cx)},{f(base + 1)} V{f(base - 18)}" stroke="{INK}" stroke-width="5"/>'
-                 f'<rect x="{f(cx - 16)}" y="{f(base - 4)}" width="32" height="6" rx="2" fill="{STEEL}" stroke="{INK}" stroke-width="2"/>')
-        o.append(f'<ellipse cx="{f(cx)}" cy="{f(base - 42)}" rx="32" ry="11" fill="none" stroke="{INK}" stroke-width="4"/>'
-                 f'<ellipse cx="{f(cx)}" cy="{f(base - 42)}" rx="32" ry="11" fill="none" stroke="{STEEL_LT}" stroke-width="1.4"/>')
-        o.append(f'<circle cx="{f(cx)}" cy="{f(base - 42)}" r="15" fill="{C["gold"]}" stroke="{INK}" stroke-width="2.6"/>'
-                 f'<path d="M{f(cx - 15)},{f(base - 42)} A15,15 0 0 0 {f(cx + 15)},{f(base - 42)}Z" fill="{C["phoenix"]}"/>'
-                 f'<circle cx="{f(cx)}" cy="{f(base - 42)}" r="15" fill="none" stroke="{INK}" stroke-width="2.6"/>')
-        tower = f'<rect x="-4" y="-9" width="8" height="10" fill="{C["crimson"]}" stroke="{INK}" stroke-width="1.8"/><path d="M-6,-9 h12 l-6,-6z" fill="{C["gold"]}" stroke="{INK}" stroke-width="1.6"/>'
-        if animate:
-            steps = [(cx + math.cos(a) * 32, base - 42 + math.sin(a) * 11) for a in [k * math.tau / 8 for k in range(8)]]
-            vals = ";".join(f"{f(x)} {f(y)}" for x, y in steps)
-            o.append(f'<g transform="translate({f(steps[1][0])} {f(steps[1][1])})"><animateTransform attributeName="transform" type="translate" values="{vals}" '
-                     f'calcMode="discrete" dur="4s" repeatCount="indefinite"/>{tower}</g>')
-        else:
-            o.append(f'<g transform="translate({f(cx + 22)} {f(base - 34)})">{tower}</g>')
-    elif kind == "tree":  # a branching tree in a lab pot
-        pot = rpoly([(cx - 18, base - 22), (cx + 18, base - 22), (cx + 14, base + 1), (cx - 14, base + 1)], 3)
-        o.append(inked(pot, C["phoenix"], 2.4))
-        o.append(f'<rect x="{f(cx - 21)}" y="{f(base - 27)}" width="42" height="7" rx="2" fill="{C["ember"]}" stroke="{INK}" stroke-width="2"/>')
-        segs = [((cx, base - 26), (cx, base - 44)), ((cx, base - 44), (cx - 16, base - 56)), ((cx, base - 44), (cx + 14, base - 58)),
-                ((cx - 16, base - 56), (cx - 24, base - 66)), ((cx - 16, base - 56), (cx - 8, base - 68)), ((cx + 14, base - 58), (cx + 22, base - 68))]
-        for (x0, y0), (x1, y1) in segs:
-            o.append(f'<path d="M{f(x0)},{f(y0)} V{f(y1)} H{f(x1)}" fill="none" stroke="{INK}" stroke-width="5" stroke-linejoin="round"/>'
-                     f'<path d="M{f(x0)},{f(y0)} V{f(y1)} H{f(x1)}" fill="none" stroke="#7A4524" stroke-width="2"/>')
-        for x, y in ((cx - 24, base - 66), (cx - 8, base - 68), (cx + 22, base - 68)):
-            o.append(f'<circle cx="{f(x)}" cy="{f(y)}" r="5" fill="{C["spill"] if xed else "#4EA54A"}" stroke="{INK}" stroke-width="2"/>')
-    return "".join(o)
-
-
-def two_frame(a, b, animate, period):
-    if not animate:
-        return a
-    an = lambda v: f'<animate attributeName="opacity" values="{v}" calcMode="discrete" dur="{period}s" repeatCount="indefinite"/>'
-    return f'<g>{an("1;0")}{a}</g><g opacity="0">{an("0;1")}{b}</g>'
-
-
-def reveal_path(svg, x, y, w, h, animate, uid):
-    if not animate:
-        return svg
-    vals = ";".join(f"{f(w * k / 6)}" for k in range(1, 7)) + f";{f(w)};{f(w * .1)}"
-    return (f'<clipPath id="rv{uid}"><rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="{f(h)}">'
-            f'<animate attributeName="width" values="{vals}" keyTimes="0;.08;.16;.24;.32;.4;.9;1" calcMode="discrete" dur="5s" repeatCount="indefinite"/></rect></clipPath>'
-            f'<g clip-path="url(#rv{uid})">{svg}</g>')
 
 
 STACKS = {  # same lists as lab/build_projects.py
@@ -494,129 +391,6 @@ def cabinet(theme, layout="wide", animate=True):
     return doc(W, H, "".join(s), ts, "Stack: " + ", ".join(labels) + ".")
 
 
-# ------------------------------------------------------------------ live instruments
-
-def contributions_data():
-    """Real numbers from the last lab round's card: totals from its label, the 26-week
-    heatmap levels read back from its cells."""
-    svg = (ROOT / "assets" / "contributions-still-light.svg").read_text(encoding="utf-8")
-    lab = re.search(r'aria-label="([^"]*)"', svg).group(1)
-    num = lambda pat: int(re.search(pat, lab).group(1))
-    heat = ["#dedef4", "#a8a8f6", "#6666fd", "#1313ba", "#0a0a5d"]
-    cells = []
-    for x, y, fill in re.findall(r'<rect x="([\d.]+)" y="([\d.]+)" width="7" height="7" fill="(#[0-9a-f]+)"', svg):
-        if fill in heat:
-            cells.append((float(x), float(y), heat.index(fill)))
-    xs = sorted({c[0] for c in cells})
-    ys = sorted({c[1] for c in cells})
-    grid = {(xs.index(x), ys.index(y)): lv for x, y, lv in cells}
-    return dict(total=num(r"(\d+) in the last 12"), last7=num(r"(\d+) in the last 7"), streak=num(r"streak (\d+)"),
-                best=num(r"best (\d+)"), grid=grid, weeks=len(xs))
-
-
-def contrib(theme, animate=True):
-    """GitHub on a lab CRT standing on the desk: the year's total races up, and the last 26 weeks
-    glow on the screen as a phosphor grid that lands along diagonals."""
-    v = contributions_data()
-    xed = theme == "dark"
-    P = THEME[theme]
-    uid = f"gh{theme[0]}{int(animate)}"
-    ts = Typesetter(uid)
-    W, H = 252, 188
-    phos = [("#1E2A4A", "#2F6BFF", "#5FA8FF", "#A8E0FF", "#FFFFFF"), ("#1A2A1E", "#2E7A3E", "#4FCB62", C["spill"], "#E9FFB8")][xed]
-
-    def screen(sx, sy, sw, sh):
-        g = [stepped_count(ts, v["total"], "body-bold", 26, sx + 10, sy + 26, P["screen_text"], "start", animate),
-             ts.text("in 12 months", "body-bold", 9.5, sx + 14 + text_width(str(v["total"]), "body-bold", 26), sy + 25, P["screen_text"])[0]]
-        cell, gap = 5.2, 1.2
-        gx, gy = sx + 10, sy + 34
-        for (c, r), lv in v["grid"].items():
-            x, y = gx + c * (cell + gap), gy + r * (cell + gap)
-            rect = f'<rect x="{f(x)}" y="{f(y)}" width="{cell}" height="{cell}" fill="{phos[lv]}"'
-            if animate:
-                d = .4 + (c + r) * .025
-                rect += f' opacity="1"><animate attributeName="opacity" values="0;1" keyTimes="0;{d / (d + .01):.4f}" calcMode="discrete" dur="{d + .01:.2f}s" fill="freeze"/></rect>'
-            else:
-                rect += "/>"
-            g.append(rect)
-        return "".join(g)
-
-    desk_y = 140
-    content = lab_wall(0, 0, W, desk_y, xed) + desk(0, W, desk_y, H, xed)
-    content += monitor(126, desk_y + 1, 196, 112, P, xed, screen, uid)
-    from panels import label_plate
-    content += label_plate(ts, 22, desk_y + 14, 208, 20, "@Llenoxinn", f"{v['streak']} day streak", P)
-    from panels import panel, tape, corner_spill
-    s = [panel(6, 6, 238, 172, P["panel"], 31, uid, content)]
-    s.append(tape(30, 8, 46, -28) if not xed else corner_spill(30, 8, 61, 1.4, 11))
-    group = "".join(s)
-    if xed:
-        group = f'<g transform="rotate(-.8 {W / 2} {H / 2})">{group}</g>'
-    label = (f"GitHub contributions for @Llenoxinn: {v['total']} in the last 12 months, {v['last7']} in the last 7 days, "
-             f"current streak {v['streak']} days, best {v['best']}.")
-    return doc(W, H, group, ts, label)
-
-
-def pico(theme, animate=True):
-    """picoGym as a test-tube rack on the desk: one tube per category, each filled in proportion
-    to its solves (the busiest category fills its tube), the count etched on the rack under it."""
-    data = json.loads((ROOT / "lab" / "data" / "picoctf.json").read_text(encoding="utf-8"))
-    cats = [(k, sum(v[d] for d in ("easy", "medium", "hard")), v.get("total")) for k, v in data["solved"].items()]
-    total = sum(c[1] for c in cats)
-    short = {"General Skills": "GEN", "Reverse Engineering": "REV", "Cryptography": "CRY", "Web Exploitation": "WEB",
-             "Artificial Intelligence": "AI", "Forensics": "FOR", "Binary Exploitation": "BIN", "Blockchain": "BLK"}
-    colors = {"GEN": "#8FD3FF", "REV": C["phoenix"], "CRY": C["gold"], "WEB": C["spill"], "AI": "#C9A0FF",
-              "FOR": "#FF8A9C", "BIN": C["crimson"], "BLK": "#9AA3B8"}
-    xed = theme == "dark"
-    P = THEME[theme]
-    uid = f"pg{theme[0]}{int(animate)}"
-    ts = Typesetter(uid)
-    W, H = 252, 188
-    desk_y = 140
-    content = lab_wall(0, 0, W, desk_y, xed) + desk(0, W, desk_y, H, xed)
-    content += stepped_count(ts, total, "body-bold", 30, 18, 40, P["screen_text"] if xed else C["bone"], "start", animate,
-                             attrs=f' stroke="{INK}" stroke-width="4" stroke-linejoin="round" paint-order="stroke"')
-    content += ts.text("picoGym solves", "body-bold", 11, 22 + text_width(str(total), "body-bold", 30), 38, C["bone"])[0]
-    # the rack
-    rx0, rx1, ry = 16, W - 16, desk_y - 22
-    n = len(cats)
-    step = (rx1 - rx0 - 16) / n
-    tubes = []
-    for i, (name, solved, tot) in enumerate(cats):
-        cx = rx0 + 8 + step * (i + .5)
-        top, bot = 52, ry + 8          # the tube passes down into a hole in the rack
-        tube = f"M{f(cx - 7)},{f(top)} V{f(bot - 7)} a7,7 0 0 0 14,0 V{f(top)}Z"
-        frac = solved / (max(c[1] for c in cats) or 1)
-        fill_h = 0 if not solved else (bot - ry) + (ry - top - 6) * max(.06, frac)
-        col = colors[short[name]]
-        liq = f'<rect x="{f(cx - 9)}" y="{f(bot - fill_h)}" width="18" height="{f(fill_h + 4)}" fill="{col}"'
-        if animate and fill_h:
-            liq += (f'><animate attributeName="y" values="{f(bot)};{f(bot - fill_h * .4)};{f(bot - fill_h * .8)};{f(bot - fill_h)}" keyTimes="0;.3;.6;.9" '
-                    f'calcMode="discrete" dur=".7s" begin="{.4 + i * .08:.2f}s" fill="freeze"/></rect>')
-        else:
-            liq += "/>"
-        tubes.append(inked(tube, "#CFE6EA", 2.2, grain=None, extra=clipped(f"tb{uid}{i}", tube, liq)))
-        tubes.append(fold([(cx - 3.5, top + 6), (cx - 3.5, bot - 14)], 1.8, "#FFFFFF"))
-        tubes.append(f'<rect x="{f(cx - 9)}" y="{f(top - 5)}" width="18" height="6" rx="2" fill="{STEEL_LT}" stroke="{INK}" stroke-width="1.8"/>')
-    content += "".join(tubes)
-    content += inked(rpoly([(rx0, ry), (rx1, ry), (rx1, ry + 16), (rx0, ry + 16)], 3), "#7A4524" if not xed else "#4A2A18", 2.6)
-    for i, (name, solved, tot) in enumerate(cats):
-        cx = rx0 + 8 + step * (i + .5)
-        content += ts.text(short[name], "body-bold", 7.6, cx, ry + 7.6, C["bone"], anchor="middle", tracking=.4)[0]
-        content += ts.text(str(solved), "body-bold", 7, cx, ry + 14.4, C["gold"], anchor="middle")[0]
-    from panels import label_plate, panel, tape, corner_spill
-    content += label_plate(ts, 22, desk_y + 14, 208, 20, f"@{data['username']}", f"{len([c for c in cats if c[1]])} of {n} categories", P)
-    if xed:
-        content += f'<ellipse cx="60" cy="{desk_y + 4}" rx="22" ry="3.5" fill="{C["spill"]}" stroke="{INK}" stroke-width="2"/>'
-    s = [panel(6, 6, 238, 172, P["panel"], 41, uid, content)]
-    s.append(tape(220, 8, 46, 24) if not xed else corner_spill(220, 8, 71, 1.4, 11))
-    group = "".join(s)
-    if xed:
-        group = f'<g transform="rotate(.6 {W / 2} {H / 2})">{group}</g>'
-    label = f"picoGym @{data['username']}: {total} challenges solved. " + ", ".join(f"{k} {s_}" for k, s_, _ in cats if s_) + "."
-    return doc(W, H, group, ts, label)
-
-
 # ------------------------------------------------------------------ contact intercoms
 
 CONTACTS = [("linkedin", "LinkedIn", "linkedin.com/in/dsjuevesano"), ("github", "GitHub", "github.com/Llenoxinn")]
@@ -664,26 +438,3 @@ def intercom(key, label, url, theme, animate=True):
             s.append(f'<path d="M{gx + 30},{gy} l8,14 l-6,8 l10,14" fill="none" stroke="{INK}" stroke-width="1.6"/>')
     s.append(tooth(W, H))
     return doc(W, H, "".join(s), ts, f"{label}: {url}")
-
-
-if __name__ == "__main__":
-    import panels
-    out = ROOT / "lab" / ".runtime" / "preview" / "readme"
-    out.mkdir(parents=True, exist_ok=True)
-    panels.LINES.update(LINES)
-    for theme in ("light", "dark"):
-        for key in LINES:
-            for lay in ("wide", "narrow"):
-                (out / f"h-{key}-{lay}-{theme}.svg").write_text(panels.header(key, theme, lay, True), encoding="utf-8")
-        for lay in ("wide", "narrow"):
-            (out / f"feature-{lay}-{theme}.svg").write_text(panels.feature(theme, lay, True), encoding="utf-8")
-            (out / f"trophies-{lay}-{theme}.svg").write_text(trophy_wall(theme, lay, True), encoding="utf-8")
-            (out / f"stack-{lay}-{theme}.svg").write_text(cabinet(theme, lay, True), encoding="utf-8")
-        for i, p in enumerate(PROJECTS):
-            (out / f"p-{re.sub('[^a-z]', '', p['name'].lower())}-{theme}.svg").write_text(project_card(p, theme, True, i), encoding="utf-8")
-        (out / f"live-gh-{theme}.svg").write_text(contrib(theme), encoding="utf-8")
-        (out / f"live-lc-{theme}.svg").write_text(panels.leet(theme), encoding="utf-8")
-        (out / f"live-pg-{theme}.svg").write_text(pico(theme), encoding="utf-8")
-        for key, label, url in CONTACTS:
-            (out / f"c-{key}-{theme}.svg").write_text(intercom(key, label, url, theme), encoding="utf-8")
-    print("readme pieces written to", out)

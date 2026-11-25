@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild the profile's deterministic artwork with the active lab theme."""
+"""Redraw the whole profile (build_lab.py) and stamp every image URL with its content hash."""
 import re
 import subprocess
 import sys
@@ -28,7 +28,7 @@ def stamp_static_urls():
 
 
 def main():
-    for script in ("build_banner.py", "build_headers.py", "build_shelf.py", "build_projects.py"):
+    for script in ("build_lab.py",):
         subprocess.run([sys.executable, str(LAB / script)], check=True, cwd=LAB.parent)
     stamp_static_urls()
 

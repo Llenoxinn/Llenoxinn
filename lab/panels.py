@@ -405,34 +405,6 @@ def studio(cx, floor, s, xed, animate, uid):
     return "".join(out)
 
 
-def monitor(cx, floor, w, h, P, xed, inner, uid):
-    """A lab CRT on a stand, its foot pressed into the desk. XED's screen is cracked."""
-    stand_h = 16
-    cy = floor - stand_h - h / 2 + 2
-    out = [inked(rpoly([(cx - 20, cy + h / 2 - 4), (cx + 20, cy + h / 2 - 4), (cx + 34, floor + 2), (cx - 34, floor + 2)], 3), "#5B6478", 2.6)]
-    case = rpoly([(cx - w / 2, cy - h / 2), (cx + w / 2, cy - h / 2), (cx + w / 2, cy + h / 2), (cx - w / 2, cy + h / 2)], 12)
-    out.append(inked(case, "#C9C2AE" if not xed else "#4A4F63", 3.4, extra=clipped(f"mc{uid}", case,
-               f'<rect x="{f(cx + w * .28)}" y="{f(cy - h)}" width="{f(w)}" height="{f(h * 2)}" fill="{INK}" opacity=".18"/>')))
-    sx, sy, sw, sh = cx - w / 2 + 12, cy - h / 2 + 10, w - 24, h - 20
-    scr = rpoly([(sx, sy), (sx + sw, sy), (sx + sw, sy + sh), (sx, sy + sh)], 14)
-    scan = "".join(f'<rect x="{f(sx)}" y="{f(sy + k * 4)}" width="{f(sw)}" height="1.4" fill="#FFFFFF" opacity=".05"/>' for k in range(int(sh / 4)))
-    out.append(f'<path d="{scr}" fill="{P["screen"]}" stroke="{INK}" stroke-width="3"/>')
-    out.append(clipped(f"ms{uid}", scr, inner(sx, sy, sw, sh) + scan))
-    if xed:
-        out.append(f'<path d="M{f(sx + sw * .74)},{f(sy)} l-8,20 l10,10 l-14,22 M{f(sx + sw * .74 - 8)},{f(sy + 20)} l-18,6" fill="none" stroke="#FFFFFF" stroke-width="1.6" opacity=".85"/>')
-    return "".join(out)
-
-
-def label_plate(ts, x, y, w, h, left, right, P):
-    """A small riveted plate screwed to the desk front, carrying the panel's caption."""
-    return (f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="{f(h)}" rx="3" fill="{C["bone"]}" stroke="{INK}" stroke-width="2.2"/>'
-            f'<circle cx="{f(x + 6)}" cy="{f(y + h / 2)}" r="1.8" fill="{INK}"/><circle cx="{f(x + w - 6)}" cy="{f(y + h / 2)}" r="1.8" fill="{INK}"/>'
-            + ts.text(left, "body-bold", 11.5, x + 13, y + h * .7, INK)[0]
-            + ts.text(right, "body", 10.5, x + w - 13, y + h * .7, "#3A4152", anchor="end")[0])
-
-
-# ------------------------------------------------------------------ the pieces
-
 def header(key, theme, layout="wide", animate=True):
     """Section header: the flask and the title stand on a wall shelf. XED's shelf has lost a
     bracket and sags; the flask has boiled over and runs off the plank's edge."""
@@ -665,71 +637,3 @@ def kid_flames(x0, x1, base, hmax, seed=5):
             x += w
         out.append(f'<path d="{d}L{f(x1)},{f(base)} Z" fill="{col}" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/>')
     return "".join(out)
-
-
-LEET = dict(handle="Acetylsphae", solved=dict(Easy=30, Medium=1, Hard=0), active=11)
-
-
-def leet(theme, animate=True, v=LEET):
-    """LeetCode on a lab CRT standing on a desk: total solved races up, three difficulty bars
-    fill in steps. The caption is a plate screwed to the desk front."""
-    xed = theme == "dark"
-    P = THEME[theme]
-    uid = f"lc{theme[0]}{int(animate)}"
-    ts = Typesetter(uid)
-    W, H = 252, 188
-    total = sum(v["solved"].values())
-    mx = max(v["solved"].values()) or 1
-
-    def screen(sx, sy, sw, sh):
-        g = [stepped_count(ts, total, "body-bold", 40, sx + 12, sy + 42, P["screen_text"], "start", animate),
-             ts.text("solved", "body-bold", 12, sx + 16 + text_width(str(total), "body-bold", 40), sy + 40, P["screen_text"])[0]]
-        for i, (k, col) in enumerate((("Easy", P["easy"]), ("Medium", P["medium"]), ("Hard", P["hard"]))):
-            n = v["solved"][k]
-            by = sy + 54 + i * 11
-            bw = (sw - 66) * n / mx
-            g.append(f'<rect x="{f(sx + 12)}" y="{f(by)}" width="{f(sw - 66)}" height="6" fill="#FFFFFF" opacity=".1"/>')
-            bar = f'<rect x="{f(sx + 12)}" y="{f(by)}" width="{f(max(bw, 2))}" height="6" fill="{col}"'
-            if animate and n:
-                bar += (f'><animate attributeName="width" values="0;{f(bw * .33)};{f(bw * .66)};{f(bw)}" keyTimes="0;.3;.6;.9" '
-                        f'calcMode="discrete" dur=".6s" begin="{.5 + i * .1:.1f}s" fill="freeze"/></rect>')
-            else:
-                bar += "/>"
-            g.append(bar)
-            g.append(ts.text(f"{k[0]} {n}", "body-bold", 9.5, sx + sw - 48, by + 6, P["screen_text"])[0])
-        return "".join(g)
-
-    desk_y = 140
-    content = desk(0, W, desk_y, H, xed)
-    content += monitor(126, desk_y + 1, 196, 112, P, xed, screen, uid)
-    content += label_plate(ts, 22, desk_y + 14, 208, 20, f"@{v['handle']}", f"{v['active']} active days", P)
-    if xed:
-        content += f'<ellipse cx="200" cy="{desk_y + 4}" rx="22" ry="3.5" fill="{C["spill"]}" stroke="{INK}" stroke-width="2"/>'
-        content += f'<path d="M212,{desk_y + 6} v10 a3.5,3.5 0 0 0 7,0 v-10z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2"/>'
-    wall = lab_wall(0, 0, W, desk_y, xed)
-    s = [panel(6, 6, 238, 172, P["panel"], 23, uid, wall + content)]
-    if not xed:
-        s.append(tape(30, 8, 46, -28))
-    else:
-        s.append(corner_spill(226, 8, 51, 1.4, 11))
-    group = "".join(s)
-    if xed:
-        group = f'<g transform="rotate(.8 {W / 2} {H / 2})">{group}</g>'
-    body = f'<defs>{toon_defs()}</defs>{ts.defs_svg()}' + group
-    label = (f"LeetCode @{v['handle']}: {total} problems solved ({v['solved']['Easy']} easy, {v['solved']['Medium']} medium, "
-             f"{v['solved']['Hard']} hard) over {v['active']} active days.")
-    return svg_doc(W, H, body, label)
-
-
-if __name__ == "__main__":
-    from notebook import ROOT
-    out = ROOT / "lab" / ".runtime" / "preview"
-    out.mkdir(parents=True, exist_ok=True)
-    for theme in ("light", "dark"):
-        for anim, tag in ((True, ""), (False, "-still")):
-            (out / f"g3-header{tag}-{theme}.svg").write_text(header("projects", theme, "wide", anim), encoding="utf-8")
-            (out / f"g3-header-narrow{tag}-{theme}.svg").write_text(header("projects", theme, "narrow", anim), encoding="utf-8")
-            (out / f"g3-feature{tag}-{theme}.svg").write_text(feature(theme, "wide", anim), encoding="utf-8")
-            (out / f"g3-feature-narrow{tag}-{theme}.svg").write_text(feature(theme, "narrow", anim), encoding="utf-8")
-            (out / f"g3-leet{tag}-{theme}.svg").write_text(leet(theme, anim), encoding="utf-8")
-    print("gate 3 written to", out)

@@ -1,4 +1,4 @@
-"""Readings / Vitals: one instrument console in the painted lab. Three different machines stand
+"""Readings / Vitals: the instrument console in the painted lab. Three different machines stand
 on one steel console, wired into a junction box: a GitHub activity scope (CRT heatmap and
 LED readouts), a LeetCode Nixie counter with three analog dials, and the picoGym tube rack.
 Each has a brass plate on the console front. XED's console sparks, cracks a tube and spills
@@ -10,10 +10,9 @@ import random
 
 from notebook import ROOT, Typesetter, svg_doc, text_width
 from panels import lab_wall, scorch
-from rooms import STEEL, STEEL_DK, STEEL_LT, bolt, brass_plate, contributions_data, tooth
+from rooms import STEEL, STEEL_DK, STEEL_LT, bolt, brass_plate, tooth
 from toon import INK, PHOENIX as C, clipped, defs as toon_defs, f, fold, inked, rpoly
 
-LEET = dict(handle="Acetylsphae", solved=dict(Easy=30, Medium=1, Hard=0), active=11)
 
 
 def frames_text(ts, seq, face, size, x, y, fill, begin, step=.06, anchor="middle", attrs=""):
@@ -37,9 +36,8 @@ def count_seq(n, steps=7):
 
 # ------------------------------------------------------------------ the machines
 
-def scope(ts, x, base, w, xed, animate, uid):
+def scope(ts, x, base, w, xed, animate, uid, v):
     """GitHub activity scope: a heavy CRT box standing on the console."""
-    v = contributions_data()
     h = 222
     top = base - h + 2
     out = []
@@ -88,8 +86,8 @@ def scope(ts, x, base, w, xed, animate, uid):
         lx = x + 18 + i * (w - 36) / 2
         lw = (w - 36) / 2 - 10
         out.append(f'<rect x="{f(lx)}" y="{f(led_y)}" width="{f(lw)}" height="30" rx="4" fill="#1A1E2E" stroke="{INK}" stroke-width="2.4"/>')
-        out.append(ts.text(val, "body-bold", 17, lx + 10, led_y + 21.5, "#FF4A3A" if not xed else C["phoenix"])[0])
-        out.append(ts.text(lab, "body-bold", 10, lx + 14 + text_width(val, "body-bold", 17), led_y + 20, "#C9C2AE")[0])
+        out.append(ts.text(val, "body-bold", 15, lx + 9, led_y + 20.5, "#FF4A3A" if not xed else C["phoenix"])[0])
+        out.append(ts.text(lab, "body-bold", 8.6, lx + 12 + text_width(val, "body-bold", 15), led_y + 19.5, "#C9C2AE")[0])
     for kx in (x + 22, x + w - 22):
         out.append(f'<rect x="{f(kx - 10)}" y="{f(base - 2)}" width="20" height="6" rx="2" fill="{STEEL_DK}" stroke="{INK}" stroke-width="1.8"/>')
     return "".join(out), (x + w, top + 60)
@@ -122,7 +120,7 @@ def dial(ts, cx, cy, r, val, vmax, label, colour, animate, begin, uid):
     return face + "".join(ticks) + band + lab + needle + pin
 
 
-def nixie(ts, x, base, w, xed, animate, uid, v=LEET):
+def nixie(ts, x, base, w, xed, animate, uid, v):
     """LeetCode Nixie counter: three glass tubes on a steel box roll to the total; three dials
     on the box front read Easy, Medium and Hard."""
     total = sum(v["solved"].values())
@@ -225,70 +223,106 @@ def spark(x, y, animate):
             f'dur="3.2s" begin="1.6s" repeatCount="indefinite"/>{s}</g>')
 
 
-def console(theme, layout="wide", animate=True):
+TILE_W, TILE_H = 252, 300
+DATA = ROOT / "lab" / "data"
+
+
+def github_data():
+    d = json.loads((DATA / "github.json").read_text(encoding="utf-8"))
+    d["grid"] = {tuple(int(n) for n in k.split(",")): lv for k, lv in d["grid"].items()}
+    return d
+
+
+def leetcode_data():
+    return json.loads((DATA / "leetcode.json").read_text(encoding="utf-8"))
+
+
+def tile(kind, theme, animate=True):
+    """One machine on its stretch of the lab console. The three tiles sit side by side in the
+    README (one image per live source, each with its own link and generated block), and the
+    wall, console top and plates line up across them so they read as one bench."""
     xed = theme == "dark"
-    wide = layout == "wide"
-    uid = f"cn{layout[0]}{theme[0]}{int(animate)}"
+    uid = f"t{kind[0]}{theme[0]}{int(animate)}"
     ts = Typesetter(uid)
-    s = []
-    plates = []
-    if wide:
-        W, H = 760, 352
-        top_y = 286
-        s.append(lab_wall(0, 0, W, top_y, xed))
-        machines = [("scope", 16, 270), ("nixie", 304, 196), ("rack", 524, 220)]
-        bases = [top_y] * 3
-        console_rows = [(0, W, top_y, H)]
+    W, H, base = TILE_W, TILE_H, 240
+    s = [lab_wall(-40, 0, W + 80, base, xed),
+         f'<rect x="-4" y="{base}" width="{W + 8}" height="{H - base + 4}" fill="{"#4B5370" if not xed else "#232A40"}" stroke="{INK}" stroke-width="3.4"/>'
+         f'<rect x="-4" y="{base}" width="{W + 8}" height="12" fill="{"#7C86A0" if not xed else "#3A4058"}" stroke="{INK}" stroke-width="3"/>'
+         + fold([(8, base + 4), (W / 2, base + 4), (W - 8, base + 4)], 2.2, "#C9D0DE")]
+    if kind == "github":
+        v = github_data()
+        art, _ = scope(ts, 12, base, W - 24, xed, animate, uid, v)
+        plate = ("GitHub", f"@{v['user']}")
+        label = (f"GitHub contributions for @{v['user']}: {v['total']} in the last 12 months, {v['last7']} in the last 7 days, "
+                 f"current streak {v['streak']} days, best {v['best']}.")
+    elif kind == "leetcode":
+        v = leetcode_data()
+        art, _, _ = nixie(ts, 28, base, W - 56, xed, animate, uid, v)
+        plate = ("LeetCode", f"@{v['handle']}, {v['active']} active days")
+        n = v["solved"]
+        label = (f"LeetCode @{v['handle']}: {sum(n.values())} problems solved ({n['Easy']} easy, {n['Medium']} medium, "
+                 f"{n['Hard']} hard) over {v['active']} active days.")
     else:
-        W, H = 400, 1000
-        s.append(lab_wall(0, 0, W, H, xed))
-        machines = [("scope", 18, 364), ("nixie", 92, 216), ("rack", 80, 240)]
-        bases = [300, 620, 920]
-        console_rows = [(0, W, b, b + 60) for b in bases]
-    for x0, x1, y0, y1 in console_rows:
-        s.append(f'<rect x="{x0 - 4}" y="{y0}" width="{x1 - x0 + 8}" height="{y1 - y0 + 4}" fill="{"#4B5370" if not xed else "#232A40"}" stroke="{INK}" stroke-width="3.4"/>'
-                 f'<rect x="{x0 - 4}" y="{y0}" width="{x1 - x0 + 8}" height="12" fill="{"#7C86A0" if not xed else "#3A4058"}" stroke="{INK}" stroke-width="3"/>'
-                 + fold([(x0 + 10, y0 + 4), ((x0 + x1) / 2, y0 + 4), (x1 - 10, y0 + 4)], 2.2, "#C9D0DE"))
-    ports = {}
-    for (kind, x, w), base in zip(machines, bases):
-        if kind == "scope":
-            art, port = scope(ts, x, base, w, xed, animate, uid + "s")
-            ports["scope"] = port
-            plates.append((x + w / 2, base, "GitHub", "@Llenoxinn"))
-        elif kind == "nixie":
-            art, pl, pr = nixie(ts, x, base, w, xed, animate, uid + "n")
-            ports["nixL"], ports["nixR"] = pl, pr
-            plates.append((x + w / 2, base, "LeetCode", f"@{LEET['handle']}, {LEET['active']} active days"))
-        else:
-            art, total, user, port = rack(ts, x, base, w, xed, animate, uid + "r")
-            ports["rack"] = port
-            plates.append((x + w / 2, base, f"picoGym, {total} solves", f"@{user}"))
-        s.append(art)
-    if wide:  # wired together along the back
-        s.insert(1, cable((ports["scope"][0] - 2, 236), (ports["nixL"][0] + 2, 236), 26, C["crimson"]))
-        s.insert(1, cable((ports["nixR"][0] - 2, 240), (ports["rack"][0] + 6, 248), 22, C["prussian"] if not xed else C["gold"]))
-        if xed:
-            s.append(spark(ports["nixR"][0] + 6, 262, animate))
-    for cx, base, a, b in plates:
-        pw = max(text_width(a, "body-bold", 12.5), text_width(b, "body", 10.5)) + 40
-        s.append(brass_plate(ts, cx - pw / 2, base + 20, pw, 36, [(a, 12.5, True), (b, 10.5, False)], uid + a[:3]))
+        art, total, user, _ = rack(ts, 14, base, W - 28, xed, animate, uid)
+        plate = (f"picoGym, {total} solves", f"@{user}")
+        d = json.loads((DATA / "picoctf.json").read_text(encoding="utf-8"))
+        per = [(k, sum(c[x] for x in ("easy", "medium", "hard"))) for k, c in d["solved"].items()]
+        label = f"picoGym @{user}: {total} challenges solved. " + ", ".join(f"{k} {n}" for k, n in per if n) + "."
+    s.append(art)
+    a, b = plate
+    pw = max(text_width(a, "body-bold", 12.5), text_width(b, "body", 10.5)) + 40
+    s.append(brass_plate(ts, W / 2 - pw / 2, base + 18, pw, 36, [(a, 12.5, True), (b, 10.5, False)], uid))
     if xed:
-        s.append(f'<ellipse cx="{f(W * .4 if wide else W * .7)}" cy="{f(bases[0] + 6)}" rx="34" ry="5" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.6"/>'
-                 f'<path d="M{f((W * .4 if wide else W * .7) + 20)},{f(bases[0] + 10)} v14 a4,4 0 0 0 8,0 v-14z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.4"/>')
-        s.append(scorch(W - 40 if wide else 40, 40, 22, 6))
+        if kind == "github":
+            s.append(f'<ellipse cx="{W - 40}" cy="{base + 6}" rx="26" ry="4.5" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.4"/>'
+                     f'<path d="M{W - 30},{base + 9} v14 a4,4 0 0 0 8,0 v-14z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.2"/>')
+        elif kind == "leetcode":
+            s.append(spark(W - 30, base - 10, animate))
+            s.append(scorch(40, 30, 18, 6))
+        else:
+            s.append(f'<ellipse cx="44" cy="{base + 6}" rx="22" ry="4" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.4"/>')
     s.append(tooth(W, H))
-    v = contributions_data()
-    label = (f"Readings. GitHub @Llenoxinn: {v['total']} contributions in the last 12 months, {v['last7']} this week, {v['streak']} day streak. "
-             f"LeetCode @{LEET['handle']}: {sum(LEET['solved'].values())} solved ({LEET['solved']['Easy']} easy, {LEET['solved']['Medium']} medium, "
-             f"{LEET['solved']['Hard']} hard), {LEET['active']} active days. picoGym @sphaericus: solves by category on a tube rack.")
-    return svg_doc(W, H, f'<defs>{toon_defs()}</defs>{ts.defs_svg()}' + "".join(s), label)
+    return svg_doc(W, H, f'<defs>{toon_defs()}</defs>{ts.defs_svg()}' + "".join(s), label), label
+
+
+KINDS = ("github", "leetcode", "picogym")
+BLOCKS = {"github": "CONTRIBUTIONS", "leetcode": "LEETCODE", "picogym": "ASSAY"}
+
+
+def link(kind):
+    if kind == "github":
+        return f"https://github.com/{github_data()['user']}"
+    if kind == "leetcode":
+        return f"https://leetcode.com/u/{leetcode_data()['handle']}/"
+    d = json.loads((DATA / "picoctf.json").read_text(encoding="utf-8"))
+    return d.get("profile_url") or "https://play.picoctf.org"
+
+
+def live_block(kind):
+    """Draw one live tile (animated and still, light and dark) and return its README markup."""
+    from notebook import ASSETS, esc, scene, stamp
+    out = ASSETS / "live"
+    out.mkdir(parents=True, exist_ok=True)
+    parts, label = [], ""
+    for theme in ("light", "dark"):
+        for animate, tag in ((True, ""), (False, "-still")):
+            svg, label = tile(kind, theme, animate)
+            (out / f"{kind}{tag}-{theme}.svg").write_text(svg, encoding="utf-8")
+            parts.append(svg)
+    pic = scene(kind, label, TILE_W, TILE_H, folder="assets/live", query="v=" + stamp(*parts))
+    return f'<a href="{esc(link(kind))}">{pic}</a>'
+
+
+def write_live(kind):
+    """Redraw one live tile and refill its README block. True if the README changed."""
+    from notebook import replace_block
+    return replace_block(BLOCKS[kind], live_block(kind))
 
 
 if __name__ == "__main__":
     out = ROOT / "lab" / ".runtime" / "preview" / "readme"
     out.mkdir(parents=True, exist_ok=True)
     for theme in ("light", "dark"):
-        for lay in ("wide", "narrow"):
-            (out / f"console-{lay}-{theme}.svg").write_text(console(theme, lay, True), encoding="utf-8")
-            (out / f"console-{lay}-still-{theme}.svg").write_text(console(theme, lay, False), encoding="utf-8")
-    print("console written")
+        for kind in ("github", "leetcode", "picogym"):
+            (out / f"live-{kind}-{theme}.svg").write_text(tile(kind, theme, True)[0], encoding="utf-8")
+    print("tiles written")
