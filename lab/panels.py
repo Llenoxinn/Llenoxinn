@@ -195,31 +195,53 @@ def bottles(ts, stack, x, base, room, xed, uid, gap=10):
     return "".join(out)
 
 
-def rubber_stamp(ts, x, y, ink, uid, top="PRIVATE REPO", bottom="LIVE DEMO"):
-    """A rubber stamp pressed onto the wall: double border, a padlock, two lines of spaced
-    capitals, the ink worn through in specks where the stamp didn't bite."""
-    t1, t2 = 14.5, 10.5
-    tr1, tr2 = 1.6, 2.4
-    w1 = text_width(top, "body-bold", t1, tr1)
-    w2 = text_width(bottom, "body-bold", t2, tr2)
-    lock = 22
-    w = max(w1, w2) + lock + 30
-    h = 46
-    cx = x + lock + 16 + max(w1, w2) / 2
-    lx, ly = x + 14, y + h / 2
-    padlock = (f'<path d="M{f(lx - 5)},{f(ly - 3)} v-4 a5,5 0 0 1 10,0 v4" fill="none" stroke="{ink}" stroke-width="2.4"/>'
-               f'<rect x="{f(lx - 8)}" y="{f(ly - 3)}" width="16" height="12" rx="2" fill="{ink}"/>'
-               f'<circle cx="{f(lx)}" cy="{f(ly + 2)}" r="1.8" fill="#000" opacity=".6"/>')
-    g = (f'<path d="{wobble_rect(x, y, w, h, 9, .7)}" fill="none" stroke="{ink}" stroke-width="3"/>'
-         f'<path d="{wobble_rect(x + 4.5, y + 4.5, w - 9, h - 9, 10, .5)}" fill="none" stroke="{ink}" stroke-width="1.3"/>'
-         f'<path d="M{f(x + lock + 8)},{f(y + 9)} V{f(y + h - 9)}" stroke="{ink}" stroke-width="1.3"/>'
-         + padlock
-         + ts.text(top, "body-bold", t1, cx, y + 23, ink, anchor="middle", tracking=tr1)[0]
-         + f'<path d="M{f(cx - max(w1, w2) / 2)},{f(y + 27.5)} H{f(cx + max(w1, w2) / 2)}" stroke="{ink}" stroke-width="1.2"/>'
-         + ts.text(bottom, "body-bold", t2, cx, y + 39, ink, anchor="middle", tracking=tr2)[0])
-    wear = (f'<filter id="sw{uid}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="7"/>'
-            f'<feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -4 3.3"/><feComposite in="SourceGraphic" operator="in"/></filter>')
-    return f'{wear}<g transform="rotate(-4 {f(x + w / 2)} {f(y + h / 2)})" opacity="1"><g filter="url(#sw{uid})">{g}</g></g>'
+def live_sign(ts, x, y, xed, uid, animate):
+    """An ON AIR style box sign bolted to the wall: LIVE DEMO glows behind red glass and
+    flickers on in steps when the page loads. A small brass plate screwed beside it
+    reads PRIVATE REPO, with a padlock."""
+    fs, tr = 13, 1.4
+    word = "LIVE DEMO"
+    tw = text_width(word, "body-bold", fs, tr)
+    w, h = tw + 46, 30
+    glass_on = "#FF4A3A" if not xed else C["phoenix"]
+    glass_off = "#5A1A20"
+    out = []
+    # mounting bolts and short brackets into the wall
+    for bx in (x + 14, x + w - 14):
+        out.append(f'<rect x="{f(bx - 3)}" y="{f(y - 8)}" width="6" height="10" fill="#5B6478" stroke="{INK}" stroke-width="2"/>'
+                   f'<circle cx="{f(bx)}" cy="{f(y - 9)}" r="3" fill="#9AA3B8" stroke="{INK}" stroke-width="1.8"/>')
+    box = rpoly([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], 6)
+    out.append(f'<path d="{box}" fill="{INK}" transform="translate(4 4)"/>')
+    out.append(inked(box, "#2A2F44", 2.6))
+    gx0, gy0, gw, gh = x + 6, y + 5, w - 12, h - 10
+    glass = rpoly([(gx0, gy0), (gx0 + gw, gy0), (gx0 + gw, gy0 + gh), (gx0, gy0 + gh)], 3)
+    lit = (f'<path d="{glass}" fill="{glass_on}"/>'
+           f'<rect x="{f(gx0 - 14)}" y="{f(gy0 - 14)}" width="{f(gw + 28)}" height="{f(gh + 28)}" rx="14" fill="{glass_on}" opacity=".16"/>'
+           f'<circle cx="{f(gx0 + 10)}" cy="{f(gy0 + gh / 2)}" r="3.6" fill="#FFF1B8"/>'
+           + ts.text(word, "body-bold", fs, gx0 + 20 + tw / 2, gy0 + gh / 2 + 4.6, "#FFF6E0", anchor="middle", tracking=tr)[0]
+           + f'<path d="M{f(gx0 + 3)},{f(gy0 + 3)} h{f(gw * .45)}" stroke="#FFFFFF" stroke-width="1.6" opacity=".55"/>')
+    off = (f'<path d="{glass}" fill="{glass_off}"/>'
+           + ts.text(word, "body-bold", fs, gx0 + 20 + tw / 2, gy0 + gh / 2 + 4.6, "#8A3A40", anchor="middle", tracking=tr)[0])
+    if animate:  # flickers on: off, on, off, on and holds (lit is the base frame)
+        anim = ('<animate attributeName="opacity" values="0;1;0;1;1" keyTimes="0;.3;.45;.7;1" calcMode="discrete" dur=".9s" begin=".3s" fill="freeze"/>')
+        out.append(off + f'<g opacity="1">{anim}{lit}</g>')
+    else:
+        out.append(lit)
+    out.append(f'<path d="{glass}" fill="none" stroke="{INK}" stroke-width="2"/>')
+    # the brass plate beside it
+    pt = "PRIVATE REPO"
+    pw = text_width(pt, "body-bold", 9.5, 1.2) + 34
+    px, py = x + w + 12, y + 6
+    plate = rpoly([(px, py), (px + pw, py), (px + pw, py + 20), (px, py + 20)], 3)
+    out.append(f'<path d="{plate}" fill="{INK}" transform="translate(3 3)"/>' + inked(plate, C["gold"], 2.2,
+               extra=f'<rect x="{f(px)}" y="{f(py + 12)}" width="{f(pw)}" height="9" fill="{C["gold_sh"]}" opacity=".6"/>'))
+    lx, ly = px + 11, py + 10
+    out.append(f'<path d="M{f(lx - 3.4)},{f(ly - 1)} v-2.6 a3.4,3.4 0 0 1 6.8,0 v2.6" fill="none" stroke="#5A3A10" stroke-width="1.8"/>'
+               f'<rect x="{f(lx - 5)}" y="{f(ly - 1)}" width="10" height="7.5" rx="1.5" fill="#5A3A10"/>')
+    out.append(ts.text(pt, "body-bold", 9.5, px + 21, py + 13.8, "#5A3A10", tracking=1.2)[0])
+    for sx_ in (px + 4, px + pw - 4):
+        out.append(f'<circle cx="{f(sx_)}" cy="{f(py + 10)}" r="1.6" fill="{C["gold_dk"]}"/>')
+    return "".join(out)
 
 
 def pushpin(x, y):
@@ -513,7 +535,7 @@ def feature(theme, layout="wide", animate=True):
         tx, tw, ty = 352, 320, 30
         tank_c = (-40, -40, 150)
         pipe_x = W - 42
-        lamp_x = 640
+        lamp_x = 676
     else:
         W, H = 400, 720
         floor = 676
@@ -564,7 +586,7 @@ def feature(theme, layout="wide", animate=True):
                   f'fill="{C["spill"]}" stroke="{INK}" stroke-width="2.6"/>')
         sc.append(f'<ellipse cx="{f(lx_ + 4)}" cy="{f(floor + 10)}" rx="34" ry="6" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.6"/>')
     # the words, painted onto the wall under the lamp
-    sc.append(rubber_stamp(ts, tx, ty - 14, C["gold"] if not xed else C["phoenix"], uid))
+    sc.append(live_sign(ts, tx, ty - 6, xed, uid, animate))
     yy = ty + 72
     sc.append(ts.text(p["name"], "body-bold", 34 if wide else 31, tx, yy, P["text"],
                       attrs=f' stroke="{INK}" stroke-width="5" stroke-linejoin="round" paint-order="stroke"')[0])
