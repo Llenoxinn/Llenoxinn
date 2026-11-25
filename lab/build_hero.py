@@ -31,8 +31,8 @@ LINE = {"light": "I build things that ship.", "dark": "I break things to see how
 LAYOUTS = {
     "wide": dict(w=880, h=400, floor=330, k=0.64, tx=410, ty=8, block=(168, 96), blocks=((462, 300), (746, 300)),
                  reach=((-196, 456), (196, 456)), key=(602, 96, 122), counter=348,
-                 leaks=((112, 150, 16, 3), (392, 210, 13, 5), (812, 120, 14, 8)), clouds=((300, 52, 40, 7), (840, 214, 50, 9)),
-                 sign=(44, 116, 74, "start"), plate=(44, 154, 300, 70), line=(46, 262, 19, "start"), line_xed=8, shelf=True),
+                 leaks=((22, 150, 16, 3), (392, 210, 13, 5), (812, 120, 14, 8)), clouds=((300, 52, 40, 7), (840, 214, 50, 9)),
+                 sign=(44, 98, 68, "start"), plate=(44, 162, 300, 70), line=(46, 134, 18, "start"), line_xed=0, shelf=True),
     "narrow": dict(w=400, h=580, floor=300, k=0.5, tx=50, ty=12, block=(124, 72), blocks=((92, 250), (308, 250)),
                    reach=((-196, 456), (196, 456)), key=(200, 84, 96), counter=290,
                    leaks=((30, 120, 12, 3), (372, 140, 12, 8)), clouds=((340, 236, 36, 9),),
@@ -323,7 +323,7 @@ def lettering(ts, text, x, y, size, anchor, xed, seed, animate):
         out.append(f'<g transform="rotate({f(rot)} {f(cx + adv / 2)} {f(y)})">{"".join(g)}</g>')
         if xed and rnd.random() < .5:
             dx = cx + adv * rnd.uniform(.3, .7)
-            ln = rnd.uniform(.18, .42) * size
+            ln = rnd.uniform(.1, .22) * size
             drips.append(f'<path d="M{f(dx - 5)},{f(y - 4)} v{f(ln)} a5,5 0 0 0 10,0 v{f(-ln)}z" fill="{C["spill"]}" stroke="{INK}" stroke-width="3"/>')
         cx += adv
     return "".join(drips) + "".join(out)
@@ -420,8 +420,8 @@ def plate(ts, x, y, w, h, P, xed, uid, animate):
     else:
         g_all = chain(*br, *rr) + body
         pivot = br
-        rest = "-7"
-        sway = "-7;-4.5;-9;-5.5;-8;-6.5;-7"
+        rest = "-5"
+        sway = "-5;-3;-7;-4;-6;-4.5;-5"
         times = "0;.15;.3;.45;.6;.8;1"
         dur, begin = "2.8s", "0s"
     anim = ""
