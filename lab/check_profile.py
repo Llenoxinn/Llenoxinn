@@ -102,6 +102,14 @@ def main():
             pair = path.with_name(path.name[:theme.start()] + "-" + other + theme[2])
             assert pair.is_file(), f"Missing theme counterpart: {pair.relative_to(ROOT)}"
     for path in files:
+        name = path.name
+        if path.suffix == ".svg" and "-still-" not in name and "<animate" in path.read_text(encoding="utf-8"):
+            still = path.with_name(re.sub(r"-(dark|light)\.svg$", r"-still-\1.svg", name))
+            assert still.is_file(), f"Animated image has no reduced-motion twin: {path.relative_to(ROOT)}"
+            assert str(still.relative_to(ROOT)).replace("\\", "/") in text, f"README does not serve the still twin: {still.name}"
+        if path.suffix == ".svg" and 'width="760"' in text and "-narrow" not in name and path.parent.name in {"headers", "trophies", "stack"}:
+            narrow = path.with_name(name.replace("-still-", "-narrow-still-") if "-still-" in name else re.sub(r"-(dark|light)\.svg$", r"-narrow-\1.svg", name))
+            assert narrow.is_file(), f"Full-column image has no phone layout: {path.relative_to(ROOT)}"
         if path.suffix == ".svg":
             svg = ET.parse(path).getroot()
             assert svg.tag == "{http://www.w3.org/2000/svg}svg", f"Invalid SVG root: {path.name}"
