@@ -215,7 +215,25 @@ def tags(ts, names, x, y, room, xed, rows=2):
     return "".join(out)
 
 
-def project_card(p, theme, animate=True):
+def drawer_lamp(cx, cy, colour, animate, begin):
+    """A round pilot lamp in a steel bezel on the drawer front. Animated: dark until the label
+    lands, flickers on (on, off, on) and holds; every few seconds it blinks once. Lit is the base."""
+    lit = (f'<circle cx="{f(cx)}" cy="{f(cy)}" r="5.4" fill="{colour}"/>'
+           f'<circle cx="{f(cx)}" cy="{f(cy)}" r="9" fill="{colour}" opacity=".22"/>'
+           f'<circle cx="{f(cx - 1.6)}" cy="{f(cy - 1.8)}" r="1.8" fill="#FFFFFF" opacity=".85"/>')
+    out = [f'<circle cx="{f(cx)}" cy="{f(cy)}" r="8" fill="{STEEL}" stroke="{INK}" stroke-width="2.2"/>',
+           f'<circle cx="{f(cx)}" cy="{f(cy)}" r="5.4" fill="#1A1E2E" stroke="{INK}" stroke-width="1.4"/>']
+    if animate:
+        on = (f'<animate attributeName="opacity" values="0;1;0;1" keyTimes="0;.4;.6;.8" calcMode="discrete" dur=".5s" begin="{begin:.2f}s" fill="freeze"/>'
+              f'<animate attributeName="opacity" values="1;0;1;1" keyTimes="0;.02;.05;1" calcMode="discrete" dur="6s" begin="{begin + 3:.2f}s" repeatCount="indefinite"/>')
+        out.append(f'<g opacity="0">{on}{lit}</g>')
+    else:
+        out.append(lit)
+    out.append(f'<circle cx="{f(cx)}" cy="{f(cy)}" r="5.4" fill="none" stroke="{INK}" stroke-width="1.4"/>')
+    return "".join(out)
+
+
+def project_card(p, theme, animate=True, order=0):
     """A steel drawer front pulled from the lab wall, with one wide paper label slid into its
     brass holder: the project's name and where the code lives, one line about it, and its
     stack as small enamel tags. No pictures."""
@@ -228,7 +246,9 @@ def project_card(p, theme, animate=True):
     s.append(f'<path d="{front}" fill="{INK}" transform="translate(4 4)"/>')
     s.append(inked(front, "#4B5370" if not xed else "#1E2438", 3, extra=f'<path d="M4,10 H{W - 8}" stroke="#7C86A0" stroke-width="2.2" opacity=".8"/>'))
     # brass holder and the paper label in it
-    lx, ly, lw, lh = 16, 15, W - 40, H - 31
+    lx, ly, lw, lh = 16, 15, W - 58, H - 31
+    s.append(f'<rect x="{lx - 3}" y="{ly - 3}" width="{lw + 6}" height="{lh + 6}" rx="3" fill="#1A1E2E"/>')   # the slot the label slides out of
+    label_at = len(s)
     s.append(f'<rect x="{lx - 5}" y="{ly - 5}" width="{lw + 10}" height="{lh + 10}" rx="4" fill="{C["gold"]}" stroke="{INK}" stroke-width="2.4"/>'
              f'<rect x="{lx - 5}" y="{ly + lh - 1}" width="{lw + 10}" height="6" fill="{C["gold_sh"]}"/>'
              + bolt(lx, ly + lh / 2, 2) + bolt(lx + lw, ly + lh / 2, 2))
@@ -245,10 +265,24 @@ def project_card(p, theme, animate=True):
              + ts.text(wtxt, "body-bold", 8.4, wx + 14, ly + 16.2, C["bone"], tracking=1)[0])
     s.append(ts.text(p["line"], "body", 11.4, lx + 13, ly + 33, "#3A4152")[0])
     s.append(tags(ts, STACKS[p["name"]], lx + 13, ly + 39, lx + lw - 10, xed))
+    label = "".join(s[label_at:])
+    del s[label_at:]
+    begin = .3 + order * .12
+    if animate:  # slides out of the drawer in snapped frames, overshoots, settles
+        slide = (f'<animateTransform attributeName="transform" type="translate" values="-360 0;-360 0;-230 0;-90 0;10 0;0 0" '
+                 f'keyTimes="0;{begin / (begin + .4):.3f};{(begin + .1) / (begin + .4):.3f};{(begin + .2) / (begin + .4):.3f};{(begin + .3) / (begin + .4):.3f};1" '
+                 f'calcMode="discrete" dur="{begin + .4:.2f}s" fill="freeze"/>')
+        slot = rpoly([(lx - 6, ly - 6), (lx + lw + 6, ly - 6), (lx + lw + 6, ly + lh + 6), (lx - 6, ly + lh + 6)], 4)
+        s.append(clipped(f"sl{uid}", slot, f'<g>{slide}{label}</g>'))
+    else:
+        s.append(label)
+    lamp_col = C["spill"] if p["where"] != "private" else "#FF4A3A"
+    s.append(drawer_lamp(W - 25, H / 2 - 3, lamp_col, animate, begin + .45))
+    s.append(f'<rect x="{W - 31}" y="{H / 2 + 10}" width="12" height="20" rx="3" fill="{STEEL_LT}" stroke="{INK}" stroke-width="2"/>')   # drawer pull
     if xed:
         s.append(scorch(30, H - 12, 10, len(p["name"])))
         if len(p["name"]) % 2:
-            s.append(kid.splat(W - 14, 12, 6, len(p["name"]) + 40, drips=1, run=1.4))
+            s.append(kid.splat(W - 22, 14, 6, len(p["name"]) + 40, drips=1, run=1.2))
     s.append(tooth(W, H))
     label = f'{p["name"]}, {p["where"]} repository: {p["line"]} Built with {", ".join(STACKS[p["name"]])}.'
     return doc(W, H, "".join(s), ts, label)
@@ -606,8 +640,8 @@ if __name__ == "__main__":
             (out / f"feature-{lay}-{theme}.svg").write_text(panels.feature(theme, lay, True), encoding="utf-8")
             (out / f"trophies-{lay}-{theme}.svg").write_text(trophy_wall(theme, lay, True), encoding="utf-8")
             (out / f"stack-{lay}-{theme}.svg").write_text(cabinet(theme, lay, True), encoding="utf-8")
-        for p in PROJECTS:
-            (out / f"p-{re.sub('[^a-z]', '', p['name'].lower())}-{theme}.svg").write_text(project_card(p, theme), encoding="utf-8")
+        for i, p in enumerate(PROJECTS):
+            (out / f"p-{re.sub('[^a-z]', '', p['name'].lower())}-{theme}.svg").write_text(project_card(p, theme, True, i), encoding="utf-8")
         (out / f"live-gh-{theme}.svg").write_text(contrib(theme), encoding="utf-8")
         (out / f"live-lc-{theme}.svg").write_text(panels.leet(theme), encoding="utf-8")
         (out / f"live-pg-{theme}.svg").write_text(pico(theme), encoding="utf-8")
