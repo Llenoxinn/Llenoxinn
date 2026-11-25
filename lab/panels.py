@@ -313,8 +313,10 @@ def studio(cx, floor, s, xed, animate, uid):
                 f'<g transform="translate({f(-cx)} {f(-wy)})">{cone}</g></g></g>')
     out.append(cone)
     # input jack on the cabinet's left side, with the pill pushed into it
-    jx, jy = cx - 52 * s, cy + ch * .36
-    out.append(f'<rect x="{f(jx - 2)}" y="{f(jy - 7 * s)}" width="{f(10 * s)}" height="{f(14 * s)}" rx="2" fill="#9AA3B8" stroke="{INK}" stroke-width="2.4"/>')
+    jx, jy = cx - 40 * s, cy + ch * .36
+    jack_r = 11 * s   # a round metal socket on the cabinet's side (drawn here, its front lip after the pill)
+    out.append(f'<circle cx="{f(jx + 2)}" cy="{f(jy)}" r="{f(jack_r)}" fill="#9AA3B8" stroke="{INK}" stroke-width="2.6"/>'
+               f'<circle cx="{f(jx + 2)}" cy="{f(jy)}" r="{f(jack_r * .55)}" fill="{INK}"/>')
     # meter rack standing on the bench to the left
     mw, mh = 36 * s, 128 * s
     mx = cx - 112 * s
@@ -326,14 +328,23 @@ def studio(cx, floor, s, xed, animate, uid):
         out.append(f'<rect x="{f(mx - 11 * s)}" y="{f(my + (8 + k * 11.4) * s)}" width="{f(22 * s)}" height="{f(7.6 * s)}" rx="1.5" fill="{col}"/>')
     out.append(f'<circle cx="{f(mx)}" cy="{f(my + mh - 8 * s)}" r="{f(3 * s)}" fill="#9AA3B8" stroke="{INK}" stroke-width="2"/>')
     # cable: meter's output socket, along the bench, up into the pill's tail
-    px = jx - 30 * s
-    cable = (f"M{f(mx + mw / 2)},{f(my + mh - 8 * s)} C{f(mx + mw / 2 + 20 * s)},{f(floor + 2)} {f(px - 30 * s)},{f(floor + 2)} "
-             f"{f(px - 26 * s)},{f(jy)}")
+    cable = (f"M{f(mx + mw / 2)},{f(my + mh - 8 * s)} C{f(mx + mw / 2 + 20 * s)},{f(floor + 2)} {f(jx - 70 * s)},{f(floor + 2)} "
+             f"{f(jx - 50 * s)},{f(jy)}")
     out.append(f'<path d="{cable}" fill="none" stroke="{INK}" stroke-width="{f(9 * s)}" stroke-linecap="round"/>'
                f'<path d="{cable}" fill="none" stroke="{C["crimson"]}" stroke-width="{f(3.6 * s)}" stroke-linecap="round"/>')
-    pill = rpoly([(px - 26 * s, jy - 11 * s), (px + 28 * s, jy - 11 * s), (px + 28 * s, jy + 11 * s), (px - 26 * s, jy + 11 * s)], 11 * s)
-    out.append(inked(pill, C["bone"], 2.8, extra=f'<rect x="{f(px + 1)}" y="{f(jy - 14 * s)}" width="{f(30 * s)}" height="{f(28 * s)}" fill="{C["crimson"]}"/>'))
-    out.append(fold([(px - 18 * s, jy - 5 * s), (px - 4 * s, jy - 6.5 * s)], 2.6, "#FFFFFF"))
+    # the pill: a two-tone capsule whose crimson end is pushed into the socket
+    px0, px1 = jx - 50 * s, jx + 2
+    mid = (px0 + px1) / 2
+    pill = rpoly([(px0, jy - 10 * s), (px1, jy - 10 * s), (px1, jy + 10 * s), (px0, jy + 10 * s)], 10 * s)
+    halves = (f'<rect x="{f(mid)}" y="{f(jy - 14 * s)}" width="{f(px1 - mid + 4)}" height="{f(28 * s)}" fill="{C["crimson"]}"/>'
+              f'<rect x="{f(px0 - 4)}" y="{f(jy + 3 * s)}" width="{f(px1 - px0 + 8)}" height="{f(10 * s)}" fill="{INK}" opacity=".14"/>')
+    out.append(inked(pill, C["bone"], 2.8, extra=clipped(f"pl{uid}", pill, halves)))
+    out.append(f'<path d="M{f(mid)},{f(jy - 10 * s)} V{f(jy + 10 * s)}" stroke="{INK}" stroke-width="2.4"/>')
+    out.append(fold([(px0 + 7 * s, jy - 5 * s), (mid - 5 * s, jy - 6 * s)], 2.6, "#FFFFFF"))
+    out.append(fold([(mid + 5 * s, jy - 5 * s), (px1 - 9 * s, jy - 6 * s)], 2.2, "#FF8A9C"))
+    # the socket's front lip closes over the capsule's tip
+    out.append(f'<path d="M{f(jx + 2 - jack_r * .2)},{f(jy - jack_r)} A{f(jack_r)},{f(jack_r)} 0 0 1 {f(jx + 2 - jack_r * .2)},{f(jy + jack_r)}" '
+               f'fill="#9AA3B8" stroke="{INK}" stroke-width="2.6"/>')
     if xed:
         out.append(scorch(cx + 18 * s, cy - ch * .38, 16 * s, 4))
         out.append(f'<path d="M{f(cx - 30 * s)},{f(cy - ch * .48)} l10,18 l-8,10 l12,16" fill="none" stroke="{C["bone"]}" stroke-width="2.2"/>')
