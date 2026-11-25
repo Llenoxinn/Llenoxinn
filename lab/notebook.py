@@ -27,7 +27,7 @@ os.environ.setdefault("MPLCONFIGDIR", str(_mpl_dir))
 # Type: Inter Bold for titles, Chakra Petch for text and every digit, Pixelify Sans for
 # the wordmark and a few word tags (its 2, 5 and B misread small, so never for digits).
 FACES = {"title": "Inter-Bold.otf", "body": "ChakraPetch-Regular.ttf", "body-bold": "ChakraPetch-Bold.ttf",
-         "pixel": "PixelifySans-Bold.ttf"}
+         "pixel": "PixelifySans-Bold.ttf", "creep": "Creepster-Regular.ttf", "mono": "RubikMonoOne-Regular.ttf"}
 TRACK = {"title": -0.03}     # default tracking per face, in em
 
 # The same DOS palette as the portfolio (portfolio-fin/app/globals.css).
