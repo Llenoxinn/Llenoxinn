@@ -134,72 +134,170 @@ def flask_icon(cx, cy, s, liquid, animate, boil=False):
     return "".join(out)
 
 
-def ink_rule(x0, x1, y, uid, animate, xed, drip=True):
-    """A brush stroke under the header, drawn in once in four snapped steps."""
-    ln = x1 - x0
-    d = f"M{f(x0)},{f(y)} C{f(x0 + ln * .3)},{f(y - 3)} {f(x0 + ln * .7)},{f(y + 3)} {f(x1)},{f(y - 1)}"
-    stroke = f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="7" stroke-linecap="round"/>'
-    stroke += f'<path d="{d}" fill="none" stroke="{C["gold"]}" stroke-width="2.4" stroke-linecap="round" transform="translate(0 -1.4)"/>'
-    if animate:
-        cw = ";".join(f"{f(ln * k / 4 + 10)}" for k in (1, 2, 3, 4))
-        stroke = (f'<clipPath id="ru{uid}"><rect x="{f(x0 - 6)}" y="{f(y - 12)}" width="{f(ln + 12)}" height="24">'
-                  f'<animate attributeName="width" values="{f(ln * .25)};{cw}" keyTimes="0;.2;.45;.7;1" calcMode="discrete" dur=".5s" begin=".15s" fill="freeze"/></rect></clipPath>'
-                  f'<g clip-path="url(#ru{uid})">{stroke}</g>')
-    if xed and drip:
-        stroke += f'<path d="M{f(x1 - 40)},{f(y + 2)} v16 a4.5,4.5 0 0 0 9,0 v-16z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.6"/>'
-        stroke += f'<path d="M{f(x1 - 35.5)},{f(y + 30)} q5,7 0,10 q-5,-3 0,-10z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.2"/>'
-    return stroke
-
-
-def speaker(cx, cy, s, xed, animate, uid):
-    """PlacebAIStudio: a studio monitor whose woofer pumps, beside a level meter that never
-    moves: every effect works, except none of them touch your audio. A pill is plugged in."""
+def shelf(x0, x1, y, uid, xed, brackets=None, depth=12, sag_right=False):
+    """A steel wall shelf: a plank with a gold front edge, held up by brackets screwed under it.
+    XED's right bracket has sheared off, so the plank sags toward that end."""
+    brackets = brackets or (x0 + 40, x1 - 40)
+    drop = 7 if (xed and sag_right) else 0
+    top = f"M{f(x0)},{f(y)} L{f(x1)},{f(y + drop)} L{f(x1)},{f(y + drop + depth)} L{f(x0)},{f(y + depth)}Z"
     out = []
-    cab = rpoly([(cx - 52 * s, cy - 78 * s), (cx + 52 * s, cy - 78 * s), (cx + 56 * s, cy + 78 * s), (cx - 56 * s, cy + 78 * s)], 10 * s)
-    out.append(inked(cab, "#2A2F44" if not xed else "#1A1E2E", 3.4, extra=clipped(f"cab{uid}", cab,
-               f'<rect x="{f(cx + 24 * s)}" y="{f(cy - 90 * s)}" width="{f(60 * s)}" height="{f(180 * s)}" fill="{INK}" opacity=".35"/>')))
-    # tweeter
-    out.append(f'<circle cx="{f(cx)}" cy="{f(cy - 46 * s)}" r="{f(16 * s)}" fill="#9AA3B8" stroke="{INK}" stroke-width="3"/>'
-               f'<circle cx="{f(cx)}" cy="{f(cy - 46 * s)}" r="{f(7 * s)}" fill="{INK}"/>')
-    # woofer: pumps on twos
-    cone = (f'<circle cx="{f(cx)}" cy="{f(cy + 22 * s)}" r="{f(40 * s)}" fill="#5B6478" stroke="{INK}" stroke-width="3.4"/>'
-            f'<circle cx="{f(cx)}" cy="{f(cy + 22 * s)}" r="{f(28 * s)}" fill="#3A4152" stroke="{INK}" stroke-width="2.6"/>'
-            f'<circle cx="{f(cx)}" cy="{f(cy + 22 * s)}" r="{f(11 * s)}" fill="{C["gold"]}" stroke="{INK}" stroke-width="2.6"/>'
-            + fold([(cx - 26 * s, cy + 6 * s), (cx - 14 * s, cy - 6 * s), (cx + 2 * s, cy - 10 * s)], 3, "#C9D0DE"))
-    if animate:
-        vals = ";".join(f"{v} {f(cx)} {f(cy + 22 * s)}" for v in ("1 1", "1.1 1.1", "1 1", "1.06 1.06", "1 1", "1 1"))
-        vals = ";".join(f"{v}" for v in ("1", "1.1", "1", "1.06", "1", "1"))
-        cone = (f'<g transform="translate({f(cx)} {f(cy + 22 * s)})"><g><animateTransform attributeName="transform" type="scale" values="{vals}" '
-                f'keyTimes="0;.12;.24;.36;.48;1" calcMode="discrete" dur="1.6s" repeatCount="indefinite"/>'
-                f'<g transform="translate({f(-cx)} {f(-cy - 22 * s)})">{cone}</g></g></g>')
-    out.append(cone)
-    # the pill, plugged in by a cable
-    px, py = cx + 82 * s, cy + 52 * s
-    out.append(f'<path d="M{f(cx + 50 * s)},{f(cy + 60 * s)} C{f(cx + 70 * s)},{f(cy + 90 * s)} {f(px - 20 * s)},{f(py + 30 * s)} {f(px - 10 * s)},{f(py + 6 * s)}" '
-               f'fill="none" stroke="{INK}" stroke-width="{f(8 * s)}" stroke-linecap="round"/>'
-               f'<path d="M{f(cx + 50 * s)},{f(cy + 60 * s)} C{f(cx + 70 * s)},{f(cy + 90 * s)} {f(px - 20 * s)},{f(py + 30 * s)} {f(px - 10 * s)},{f(py + 6 * s)}" '
-               f'fill="none" stroke="{C["crimson"]}" stroke-width="{f(3.4 * s)}" stroke-linecap="round"/>')
-    pill = f'<g transform="rotate(-35 {f(px)} {f(py)})">' + inked(rpoly([(px - 26 * s, py - 12 * s), (px + 26 * s, py - 12 * s), (px + 26 * s, py + 12 * s), (px - 26 * s, py + 12 * s)], 12 * s), C["bone"], 3,
-                 extra=f'<rect x="{f(px)}" y="{f(py - 14 * s)}" width="{f(30 * s)}" height="{f(28 * s)}" fill="{C["crimson"]}"/>') \
-        + fold([(px - 18 * s, py - 5 * s), (px - 4 * s, py - 7 * s)], 3, "#FFFFFF") + "</g>"
-    out.append(pill)
-    # the level meter: flat, always
-    mx, my = cx - 104 * s, cy - 70 * s
-    out.append(inked(rpoly([(mx - 18 * s, my), (mx + 18 * s, my), (mx + 18 * s, my + 140 * s), (mx - 18 * s, my + 140 * s)], 5 * s), INK, 2.6))
-    for k in range(10):
-        lit = k >= 9
-        col = C["spill"] if lit else "#1E2436"
-        out.append(f'<rect x="{f(mx - 11 * s)}" y="{f(my + (8 + k * 13) * s)}" width="{f(22 * s)}" height="{f(9 * s)}" rx="1.5" fill="{col}"/>')
-    out.append(f'<path d="M{f(mx - 26 * s)},{f(my + 148 * s)} h{f(52 * s)}" stroke="{INK}" stroke-width="3"/>')
-    if xed:
-        out.append(scorch(cx + 20 * s, cy - 60 * s, 18 * s, 4))
-        out.append(f'<path d="M{f(cx - 30 * s)},{f(cy - 76 * s)} l10,18 l-8,10 l12,16" fill="none" stroke="{C["bone"]}" stroke-width="2.2"/>')
+    for i, bx in enumerate(brackets):
+        broken = xed and sag_right and i == len(brackets) - 1
+        by = y + depth + (drop * (bx - x0) / (x1 - x0))
+        if broken:  # the bracket snapped: a stub stays on the plank, the rest dangles from one screw
+            out.append(f'<path d="M{f(bx - 4)},{f(by - 1)} h12 v6 l-6,5 h-6z" fill="#5B6478" stroke="{INK}" stroke-width="2.6" stroke-linejoin="round"/>')
+            out.append(f'<g transform="rotate(38 {f(bx)} {f(by + 18)})"><path d="M{f(bx)},{f(by + 18)} h7 v22 l-22,-22z" fill="#5B6478" stroke="{INK}" stroke-width="2.6" stroke-linejoin="round"/></g>')
+            continue
+        out.append(f'<path d="M{f(bx - 4)},{f(by - 1)} h10 v26 l-24,-26z" fill="#5B6478" stroke="{INK}" stroke-width="2.6" stroke-linejoin="round"/>'
+                   f'<circle cx="{f(bx + 1)}" cy="{f(by + 6)}" r="1.8" fill="{INK}"/><circle cx="{f(bx + 1)}" cy="{f(by + 17)}" r="1.8" fill="{INK}"/>')
+    out.append(f'<path d="{top}" fill="{INK}" transform="translate(4 4)"/>')
+    out.append(f'<path d="{top}" fill="#7C86A0" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/>')
+    out.append(f'<path d="M{f(x0)},{f(y + depth * .45)} L{f(x1)},{f(y + drop + depth * .45)} L{f(x1)},{f(y + drop + depth)} L{f(x0)},{f(y + depth)}Z" fill="{C["gold"]}" stroke="{INK}" stroke-width="2"/>')
+    out.append(fold([(x0 + 8, y + 2.5), ((x0 + x1) / 2, y + 2.5 + drop / 2), (x1 - 8, y + 2.5 + drop)], 2.2, "#C9D0DE"))
     return "".join(out)
 
 
-def monitor(cx, cy, w, h, P, xed, inner, uid):
-    """A lab CRT on a stand. XED's screen is cracked and the case scorched."""
-    out = [inked(rpoly([(cx - 22, cy + h / 2 - 4), (cx + 22, cy + h / 2 - 4), (cx + 34, cy + h / 2 + 16), (cx - 34, cy + h / 2 + 16)], 4), "#5B6478", 2.6)]
+def bottle(ts, x, base, key, name, cap, liquid, xed=False, tipped=False, uid="b"):
+    """A reagent bottle standing on a shelf (its foot pressed 2 px into the plank), its label
+    carrying the tool's mark. Returns svg and the bottle width."""
+    from icons import ICONS
+    from notebook import mark
+    w, h = 38, 46
+    y = base - h + 2
+    body = rpoly([(x, y + 12), (x + w, y + 12), (x + w, y + h), (x, y + h)], [8, 8, 4, 4])
+    neck = rpoly([(x + 12, y + 4), (x + w - 12, y + 4), (x + w - 12, y + 14), (x + 12, y + 14)], 2)
+    capd = rpoly([(x + 10, y - 3), (x + w - 10, y - 3), (x + w - 10, y + 6), (x + 10, y + 6)], 3)
+    liq = f'<rect x="{x - 4}" y="{f(y + h * .46)}" width="{w + 8}" height="{h}" fill="{liquid}"/>'
+    lab_x, lab_y, lab_w, lab_h = x + 4, y + 18, w - 8, 22
+    icon = key if key.lower() in ICONS else (name if name.lower() in ICONS else None)
+    if icon:
+        label = mark(icon, x + w / 2 - 8, lab_y + 3, 16, INK)
+    else:
+        fs = 7.6
+        label = ts.text(name.split(".")[0][:6], "body-bold", fs, x + w / 2, lab_y + 14, INK, anchor="middle")[0]
+    g = [inked([body, neck], "#CFE6EA", 2.6, extra=clipped(f"bt{uid}", body, liq)),
+         inked(capd, cap, 2.4),
+         f'<rect x="{lab_x}" y="{lab_y}" width="{lab_w}" height="{lab_h}" rx="2" fill="{C["bone"]}" stroke="{INK}" stroke-width="1.8"/>',
+         label,
+         fold([(x + 6, y + 16), (x + 5, y + 30)], 2.4, "#FFFFFF")]
+    if tipped:  # XED cracked this one: a split in the glass, leaking onto the plank
+        g.append(f'<path d="M{x + w - 8},{y + 14} l-6,10 l5,6 l-7,12" fill="none" stroke="{INK}" stroke-width="2"/>')
+        g.append(f'<path d="M{x + w - 14},{base - 2} q14,-3 30,1 v4 q-14,2 -30,1z" fill="{liquid}" stroke="{INK}" stroke-width="2"/>')
+        g.append(f'<path d="M{x + w + 8},{base + 9} v12 a3.6,3.6 0 0 0 7.2,0 v-12z" fill="{liquid}" stroke="{INK}" stroke-width="2"/>')
+    return "".join(g), w
+
+
+def bottles(ts, stack, x, base, room, xed, uid):
+    caps = (C["crimson"], C["gold"], C["phoenix"], C["prussian"])
+    liquids = (C["spill"], C["phoenix"], "#8FD3FF", C["gold"])
+    out, i = [], 0
+    for k, (key, name) in enumerate(stack):
+        if x + 38 > room:
+            break
+        svg, w = bottle(ts, x, base, key, name, caps[k % 4], liquids[k % 4], xed, xed and k == 2, f"{uid}{k}")
+        out.append(svg)
+        x += w + 10
+    return "".join(out)
+
+
+def pushpin(x, y):
+    return (f'<ellipse cx="{f(x + 2)}" cy="{f(y + 3)}" rx="7" ry="3" fill="{INK}" opacity=".35"/>'
+            f'<circle cx="{f(x)}" cy="{f(y)}" r="7" fill="{C["crimson"]}" stroke="{INK}" stroke-width="2.4"/>'
+            f'<circle cx="{f(x - 2)}" cy="{f(y - 2)}" r="2.2" fill="#FFFFFF" opacity=".8"/>')
+
+
+def headphones(cx, top, s, xed):
+    """Studio headphones tossed onto the cabinet lid: one round cup resting on the top, the
+    other propped against it, the band arched over and the cord dropping down the back."""
+    out = []
+    lx, rx = cx - 22 * s, cx + 26 * s
+    band = f"M{f(lx)},{f(top - 20 * s)} C{f(lx - 6 * s)},{f(top - 66 * s)} {f(rx + 8 * s)},{f(top - 70 * s)} {f(rx)},{f(top - 26 * s)}"
+    out.append(f'<path d="{band}" fill="none" stroke="{INK}" stroke-width="{f(12 * s)}" stroke-linecap="round"/>'
+               f'<path d="{band}" fill="none" stroke="{C["crimson"] if not xed else C["oxblood"]}" stroke-width="{f(5.5 * s)}" stroke-linecap="round"/>')
+    for x0, y0, r in ((lx, top - 15 * s, 16 * s), (rx, top - 20 * s, 15 * s)):
+        out.append(f'<ellipse cx="{f(x0)}" cy="{f(y0)}" rx="{f(r * .8)}" ry="{f(r)}" fill="#2A2F44" stroke="{INK}" stroke-width="3"/>'
+                   f'<ellipse cx="{f(x0)}" cy="{f(y0)}" rx="{f(r * .5)}" ry="{f(r * .66)}" fill="#3A4152" stroke="{INK}" stroke-width="2"/>'
+                   + fold([(x0 - r * .5, y0 - r * .5), (x0 - r * .6, y0 + r * .1)], 2.4, "#9AA3B8"))
+    out.append(f'<path d="M{f(rx + 10 * s)},{f(top - 10 * s)} q16,6 14,34 q-2,30 4,60" fill="none" stroke="{INK}" stroke-width="2.6"/>')
+    return f'<g transform="rotate(-8 {f(cx)} {f(top)})">{"".join(out)}</g>'
+
+
+def lab_wall(x, y, w, h, xed):
+    wall, seam = (C["prussian"], C["navy"]) if not xed else ("#0E1A3A", "#070C1E")
+    out = [f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="{f(h)}" fill="{wall}"/>']
+    for i in range(1, 4):
+        sx = x + i * w / 4
+        out.append(f'<line x1="{f(sx)}" y1="{f(y)}" x2="{f(sx)}" y2="{f(y + h)}" stroke="{seam}" stroke-width="4"/>')
+        for j in range(int(h / 34)):
+            out.append(f'<circle cx="{f(sx - 9)}" cy="{f(y + 16 + j * 34)}" r="2.8" fill="{seam}"/>')
+    return "".join(out)
+
+
+def desk(x0, x1, y, bottom, xed):
+    """A bench top (light lip) with a steel front."""
+    top = "#7C86A0" if not xed else "#3A4058"
+    front = "#5B6478" if not xed else "#2A2F44"
+    return (f'<rect x="{f(x0)}" y="{f(y)}" width="{f(x1 - x0)}" height="{f(bottom - y)}" fill="{front}" stroke="{INK}" stroke-width="3"/>'
+            f'<rect x="{f(x0)}" y="{f(y)}" width="{f(x1 - x0)}" height="8" fill="{top}" stroke="{INK}" stroke-width="3"/>')
+
+
+def studio(cx, floor, s, xed, animate, uid):
+    """PlacebAIStudio on a bench: a studio monitor whose woofer pumps, and the level meter it is
+    wired to, which never moves. The plug in the monitor's input jack is a pill. Every effect
+    works, except none of them touch your audio."""
+    out = []
+    ch = 150 * s
+    cy = floor - ch / 2 + 2  # cabinet foot pressed into the bench
+    cab = rpoly([(cx - 50 * s, cy - ch / 2), (cx + 50 * s, cy - ch / 2), (cx + 54 * s, cy + ch / 2), (cx - 54 * s, cy + ch / 2)], 10 * s)
+    out.append(inked(cab, "#2A2F44" if not xed else "#1A1E2E", 3.4, extra=clipped(f"cab{uid}", cab,
+               f'<rect x="{f(cx + 22 * s)}" y="{f(cy - ch)}" width="{f(60 * s)}" height="{f(ch * 2)}" fill="{INK}" opacity=".35"/>')))
+    out.append(headphones(cx - 4 * s, cy - ch / 2 + 2, s * .9, xed))
+    ty = cy - ch * .3
+    out.append(f'<circle cx="{f(cx)}" cy="{f(ty)}" r="{f(15 * s)}" fill="#9AA3B8" stroke="{INK}" stroke-width="3"/>'
+               f'<circle cx="{f(cx)}" cy="{f(ty)}" r="{f(6 * s)}" fill="{INK}"/>')
+    wy = cy + ch * .16
+    cone = (f'<circle cx="{f(cx)}" cy="{f(wy)}" r="{f(38 * s)}" fill="#5B6478" stroke="{INK}" stroke-width="3.4"/>'
+            f'<circle cx="{f(cx)}" cy="{f(wy)}" r="{f(26 * s)}" fill="#3A4152" stroke="{INK}" stroke-width="2.6"/>'
+            f'<circle cx="{f(cx)}" cy="{f(wy)}" r="{f(10 * s)}" fill="{C["gold"]}" stroke="{INK}" stroke-width="2.6"/>'
+            + fold([(cx - 24 * s, wy - 14 * s), (cx - 12 * s, wy - 26 * s), (cx + 4 * s, wy - 30 * s)], 3, "#C9D0DE"))
+    if animate:
+        cone = (f'<g transform="translate({f(cx)} {f(wy)})"><g><animateTransform attributeName="transform" type="scale" values="1;1.1;1;1.06;1;1" '
+                f'keyTimes="0;.12;.24;.36;.48;1" calcMode="discrete" dur="1.6s" repeatCount="indefinite"/>'
+                f'<g transform="translate({f(-cx)} {f(-wy)})">{cone}</g></g></g>')
+    out.append(cone)
+    # input jack on the cabinet's left side, with the pill pushed into it
+    jx, jy = cx - 52 * s, cy + ch * .36
+    out.append(f'<rect x="{f(jx - 2)}" y="{f(jy - 7 * s)}" width="{f(10 * s)}" height="{f(14 * s)}" rx="2" fill="#9AA3B8" stroke="{INK}" stroke-width="2.4"/>')
+    # meter rack standing on the bench to the left
+    mw, mh = 36 * s, 128 * s
+    mx = cx - 112 * s
+    my = floor - mh + 2
+    rack = rpoly([(mx - mw / 2, my), (mx + mw / 2, my), (mx + mw / 2, my + mh), (mx - mw / 2, my + mh)], 5 * s)
+    out.append(inked(rack, "#1A1E2E", 2.8))
+    for k in range(10):
+        col = C["spill"] if k == 9 else "#2A3046"
+        out.append(f'<rect x="{f(mx - 11 * s)}" y="{f(my + (8 + k * 11.4) * s)}" width="{f(22 * s)}" height="{f(7.6 * s)}" rx="1.5" fill="{col}"/>')
+    out.append(f'<circle cx="{f(mx)}" cy="{f(my + mh - 8 * s)}" r="{f(3 * s)}" fill="#9AA3B8" stroke="{INK}" stroke-width="2"/>')
+    # cable: meter's output socket, along the bench, up into the pill's tail
+    px = jx - 30 * s
+    cable = (f"M{f(mx + mw / 2)},{f(my + mh - 8 * s)} C{f(mx + mw / 2 + 20 * s)},{f(floor + 2)} {f(px - 30 * s)},{f(floor + 2)} "
+             f"{f(px - 26 * s)},{f(jy)}")
+    out.append(f'<path d="{cable}" fill="none" stroke="{INK}" stroke-width="{f(9 * s)}" stroke-linecap="round"/>'
+               f'<path d="{cable}" fill="none" stroke="{C["crimson"]}" stroke-width="{f(3.6 * s)}" stroke-linecap="round"/>')
+    pill = rpoly([(px - 26 * s, jy - 11 * s), (px + 28 * s, jy - 11 * s), (px + 28 * s, jy + 11 * s), (px - 26 * s, jy + 11 * s)], 11 * s)
+    out.append(inked(pill, C["bone"], 2.8, extra=f'<rect x="{f(px + 1)}" y="{f(jy - 14 * s)}" width="{f(30 * s)}" height="{f(28 * s)}" fill="{C["crimson"]}"/>'))
+    out.append(fold([(px - 18 * s, jy - 5 * s), (px - 4 * s, jy - 6.5 * s)], 2.6, "#FFFFFF"))
+    if xed:
+        out.append(scorch(cx + 18 * s, cy - ch * .38, 16 * s, 4))
+        out.append(f'<path d="M{f(cx - 30 * s)},{f(cy - ch * .48)} l10,18 l-8,10 l12,16" fill="none" stroke="{C["bone"]}" stroke-width="2.2"/>')
+    return "".join(out)
+
+
+def monitor(cx, floor, w, h, P, xed, inner, uid):
+    """A lab CRT on a stand, its foot pressed into the desk. XED's screen is cracked."""
+    stand_h = 16
+    cy = floor - stand_h - h / 2 + 2
+    out = [inked(rpoly([(cx - 20, cy + h / 2 - 4), (cx + 20, cy + h / 2 - 4), (cx + 34, floor + 2), (cx - 34, floor + 2)], 3), "#5B6478", 2.6)]
     case = rpoly([(cx - w / 2, cy - h / 2), (cx + w / 2, cy - h / 2), (cx + w / 2, cy + h / 2), (cx - w / 2, cy + h / 2)], 12)
     out.append(inked(case, "#C9C2AE" if not xed else "#4A4F63", 3.4, extra=clipped(f"mc{uid}", case,
                f'<rect x="{f(cx + w * .28)}" y="{f(cy - h)}" width="{f(w)}" height="{f(h * 2)}" fill="{INK}" opacity=".18"/>')))
@@ -207,34 +305,50 @@ def monitor(cx, cy, w, h, P, xed, inner, uid):
     scr = rpoly([(sx, sy), (sx + sw, sy), (sx + sw, sy + sh), (sx, sy + sh)], 14)
     scan = "".join(f'<rect x="{f(sx)}" y="{f(sy + k * 4)}" width="{f(sw)}" height="1.4" fill="#FFFFFF" opacity=".05"/>' for k in range(int(sh / 4)))
     out.append(f'<path d="{scr}" fill="{P["screen"]}" stroke="{INK}" stroke-width="3"/>')
-    out.append(clipped(f"ms{uid}", scr, inner + scan + f'<path d="M{f(sx)},{f(sy)} h{f(sw * .5)} l{f(-sw * .3)},{f(sh)} h{f(-sw * .2)}z" fill="#FFFFFF" opacity=".06"/>'))
+    out.append(clipped(f"ms{uid}", scr, inner(sx, sy, sw, sh) + scan))
     if xed:
-        out.append(f'<path d="M{f(sx + sw * .7)},{f(sy)} l-8,20 l10,10 l-14,22 M{f(sx + sw * .7 - 8)},{f(sy + 20)} l-18,6" fill="none" stroke="#FFFFFF" stroke-width="1.6" opacity=".85"/>')
+        out.append(f'<path d="M{f(sx + sw * .74)},{f(sy)} l-8,20 l10,10 l-14,22 M{f(sx + sw * .74 - 8)},{f(sy + 20)} l-18,6" fill="none" stroke="#FFFFFF" stroke-width="1.6" opacity=".85"/>')
     return "".join(out)
+
+
+def label_plate(ts, x, y, w, h, left, right, P):
+    """A small riveted plate screwed to the desk front, carrying the panel's caption."""
+    return (f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="{f(h)}" rx="3" fill="{C["bone"]}" stroke="{INK}" stroke-width="2.2"/>'
+            f'<circle cx="{f(x + 6)}" cy="{f(y + h / 2)}" r="1.8" fill="{INK}"/><circle cx="{f(x + w - 6)}" cy="{f(y + h / 2)}" r="1.8" fill="{INK}"/>'
+            + ts.text(left, "body-bold", 11.5, x + 13, y + h * .7, INK)[0]
+            + ts.text(right, "body", 10.5, x + w - 13, y + h * .7, "#3A4152", anchor="end")[0])
 
 
 # ------------------------------------------------------------------ the pieces
 
 def header(key, theme, layout="wide", animate=True):
+    """Section header: the flask and the title stand on a wall shelf. XED's shelf has lost a
+    bracket and sags; the flask has boiled over and runs off the plank's edge."""
     xed = theme == "dark"
     P = THEME[theme]
-    w, h = (760, 118) if layout == "wide" else (400, 150)
+    wide = layout == "wide"
+    w, h = (760, 140) if wide else (400, 168)
     uid = f"h{key}{layout[0]}{theme[0]}{int(animate)}"
     ts = Typesetter(uid)
-    title = TITLES[key][xed]
-    line = LINES[key][xed]
+    title, line = TITLES[key][xed], LINES[key][xed]
+    plank_y = 88
     s = []
-    icon_x = 50
-    s.append(flask_icon(icon_x, 58, 1.15, C["spill"] if xed else C["crimson"], animate, boil=xed))
-    size = 62 if layout == "wide" else 54
-    word, ww = creep(ts, title, 96, 74, size, seed=3 + len(title), xed=xed, drips=xed)
+    size = 60 if wide else 44
+    x0, x1 = 16, (w - 16)
+    s.append(shelf(x0, x1, plank_y, uid, xed, brackets=(x0 + 60, x1 - 60), sag_right=True))
+    s.append(flask_icon(52, plank_y - 22, 1.1, C["spill"] if xed else C["crimson"], animate, boil=xed))
+    word, ww = creep(ts, title, 92, plank_y - 3, size, seed=3 + len(title), xed=xed, drips=False)
     s.append(word)
-    s.append(ink_rule(96, w - 24 if layout == "wide" else w - 16, 92, uid, animate, xed, drip=layout == "wide"))
-    if layout == "wide":
-        s.append(ts.text(line, "body-bold", 15.5, 98, 114, P["text"])[0])
+    if xed:  # what boiled over pools on the plank and drips off its front edge
+        s.append(f'<path d="M30,{plank_y + 1} q22,-5 48,-1 q8,2 4,4 q-24,2 -52,1z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.4"/>'
+                 f'<path d="M64,{plank_y + 10} v14 a4,4 0 0 0 8,0 v-14z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.4"/>'
+                 f'<path d="M68,{plank_y + 32} q5,7 0,10 q-5,-3 0,-10z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2"/>')
+    ly = plank_y + 44
+    if wide:
+        s.append(ts.text(line, "body-bold", 15.5, 92, ly, P["text"])[0])
     else:
         for i, ln in enumerate(wrap(line, "body-bold", 14.5, w - 110)):
-            s.append(ts.text(ln, "body-bold", 14.5, 98, 116 + i * 18, P["text"])[0])
+            s.append(ts.text(ln, "body-bold", 14.5, 92, ly + i * 19, P["text"])[0])
     body = f'<defs>{toon_defs()}</defs>{ts.defs_svg()}' + "".join(s)
     return svg_doc(w, h, body, f"{title}. {line}")
 
@@ -246,86 +360,67 @@ FEATURE = dict(name="PlacebAIStudio", line="Every effect works, except none of t
                       ("matter", "Matter.js"), ("xstate", "XState"), ("claude", "Claude API")])
 
 
-def chips(ts, stack, x, y, room, P, xed):
-    from icons import ICONS
-    from notebook import mark
-    out = []
-    for k, name in stack:
-        has = k.lower() in ICONS or name.lower() in ICONS
-        if has:
-            cw = 34
-            inner = mark(k if k.lower() in ICONS else name, x + 8, y + 7, 18, INK)
-        else:
-            cw = text_width(name, "body-bold", 12) + 18
-            inner = ts.text(name, "body-bold", 12, x + 9, y + 21, INK)[0]
-        if x + cw > room:
-            break
-        chip = rpoly([(x, y), (x + cw, y), (x + cw, y + 32), (x, y + 32)], 5)
-        out.append(f'<path d="{chip}" fill="{INK}" transform="translate(3 3)"/>' + inked(chip, C["bone"] if not xed else "#D9D2BE", 2.2) + inner)
-        x += cw + 7
-    return "".join(out)
-
-
 def feature(theme, layout="wide", animate=True):
     xed = theme == "dark"
     P = THEME[theme]
     p = FEATURE
+    wide = layout == "wide"
     uid = f"f{layout[0]}{theme[0]}{int(animate)}"
     ts = Typesetter(uid)
-    if layout == "wide":
-        W, H = 760, 300
-        px, py, pw, ph = 12, 14, 734, 270
-        art = (150, 150, 1.0)
-        tx, ty, tw = 300, 92, 420
+    if wide:
+        W, H = 760, 330
+        px, py, pw, ph = 12, 14, 734, 300
+        win = (34, 36, 250, 256)
+        tx, tw = 312, 410
     else:
-        W, H = 400, 560
-        px, py, pw, ph = 10, 14, 376, 530
-        art = (200, 150, .9)
-        tx, ty, tw = 34, 330, 330
+        W, H = 400, 640
+        px, py, pw, ph = 10, 14, 376, 612
+        win = (30, 34, 336, 240)
+        tx, tw = 30, 336
+    wx, wy, ww_, wh = win
     s = []
-    # art window inside the panel
-    ax, ay, asc = art
-    win = rpoly([(ax - 118, ay - 112), (ax + 118, ay - 112), (ax + 118, ay + 112), (ax - 118, ay + 112)], 6) if layout == "wide" else \
-        rpoly([(ax - 160, ay - 116), (ax + 160, ay - 116), (ax + 160, ay + 116), (ax - 160, ay + 116)], 6)
-    win_bg = C["prussian"] if not xed else "#0B1026"
-    rays = "".join(f'<path d="M{f(ax)},{f(ay)} L{f(ax + math.cos(a) * 400)},{f(ay + math.sin(a) * 400)} L{f(ax + math.cos(a + .16) * 400)},{f(ay + math.sin(a + .16) * 400)}Z" fill="{"#1E3570" if not xed else "#14193A"}"/>'
-                   for a in [k * .42 for k in range(15)])
-    inner = (f'<path d="{win}" fill="{win_bg}"/>' + clipped(f"wr{uid}", win, rays)
-             + f'<path d="{win}" fill="none" stroke="{INK}" stroke-width="4"/>' + speaker(ax + 10, ay - 4, asc, xed, animate, uid))
-    # text column
-    t = [ts.text(p["name"], "body-bold", 34 if layout == "wide" else 30, tx, ty, P["text"],
-                 attrs=f' stroke="{P["panel"]}" stroke-width="0"')[0]]
-    yy = ty + 30
-    for ln in wrap(p["line"], "body-bold", 17, tw):
-        t.append(ts.text(ln, "body-bold", 17, tx, yy, P["muted"])[0])
-        yy += 23
-    # award ribbon
-    ry = yy + 6
-    rw = min(tw, text_width(p["award"][0], "body-bold", 16) + 70)
+    # the art window: a lab wall, a bench, the studio on it
+    bench_y = wy + wh - 40
+    win_d = rpoly([(wx, wy), (wx + ww_, wy), (wx + ww_, wy + wh), (wx, wy + wh)], 6)
+    art = lab_wall(wx, wy, ww_, wh, xed) + desk(wx - 4, wx + ww_ + 4, bench_y, wy + wh + 4, xed)
+    art += studio(wx + ww_ * .6, bench_y + 1, 1.05 if wide else 1.1, xed, animate, uid)
+    if xed:
+        art += f'<ellipse cx="{f(wx + ww_ * .3)}" cy="{f(bench_y + 3)}" rx="30" ry="4" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.2"/>'
+    inner = f'<path d="{win_d}" fill="#000"/>' + clipped(f"aw{uid}", win_d, art) + f'<path d="{win_d}" fill="none" stroke="{INK}" stroke-width="4"/>'
+    # text column, top to bottom: stamp, name, line, pinned ribbon, award, the stack on its shelf
+    ty = (py + 30) if wide else (wy + wh + 34)
+    t = []
+    st = p["where"]
+    sw_ = text_width(st, "body-bold", 12.5) + 20
+    ink_c = C["crimson"] if not xed else C["phoenix"]
+    t.append(f'<g transform="rotate(-3 {f(tx + sw_ / 2)} {f(ty + 12)})" opacity=".9"><path d="{wobble_rect(tx, ty, sw_, 26, 9, .8)}" fill="none" stroke="{ink_c}" stroke-width="2.6"/>'
+             + ts.text(st, "body-bold", 12.5, tx + 10, ty + 17.5, ink_c)[0] + "</g>")
+    yy = ty + 66
+    t.append(ts.text(p["name"], "body-bold", 34 if wide else 30, tx, yy, P["text"])[0])
+    yy += 28
+    for ln in wrap(p["line"], "body-bold", 16.5, tw):
+        t.append(ts.text(ln, "body-bold", 16.5, tx, yy, P["muted"])[0])
+        yy += 22
+    ry = yy + 4
+    rw = min(tw, text_width(p["award"][0], "body-bold", 16) + 64)
     rib = f"M{f(tx)},{f(ry)} H{f(tx + rw)} l-12,17 l12,17 H{f(tx)} l10,-17z"
     t.append(f'<path d="{rib}" fill="{INK}" transform="translate(4 4)"/>' + inked(rib, C["gold"], 2.6,
              extra=f'<path d="M{f(tx)},{f(ry + 22)} H{f(tx + rw)} V{f(ry + 40)} H{f(tx)}Z" fill="{C["gold_sh"]}"/>'))
-    t.append(f'<circle cx="{f(tx + 26)}" cy="{f(ry + 17)}" r="9" fill="{C["crimson"]}" stroke="{INK}" stroke-width="2.4"/>'
-             f'<path d="M{f(tx + 26)},{f(ry + 11)} l2,4 4,.5 -3,3 1,4.5 -4,-2 -4,2 1,-4.5 -3,-3 4,-.5z" fill="{C["gold"]}"/>')
-    t.append(ts.text(p["award"][0], "body-bold", 16, tx + 42, ry + 23, INK)[0])
+    t.append(ts.text(p["award"][0], "body-bold", 16, tx + 30, ry + 23, INK)[0])
+    t.append(pushpin(tx + 14, ry + 17))
     t.append(ts.text(p["award"][1], "body", 13.5, tx, ry + 56, P["muted"])[0])
-    t.append(chips(ts, p["stack"], tx, ry + 70, tx + tw + 30, P, xed))
-    # where the code lives: a rubber stamp
-    st = p["where"]
-    sw_ = text_width(st, "body-bold", 12.5) + 20
-    sx_, sy_ = (tx, ty - 58) if layout == "wide" else (tx, ty - 50)
-    t.append(f'<g transform="rotate(-4 {f(sx_ + sw_ / 2)} {f(sy_ + 12)})" opacity=".9"><path d="{wobble_rect(sx_, sy_, sw_, 26, 9, .8)}" fill="none" stroke="{C["crimson"] if not xed else C["phoenix"]}" stroke-width="2.6"/>'
-             + ts.text(st, "body-bold", 12.5, sx_ + 10, sy_ + 17.5, C["crimson"] if not xed else C["phoenix"])[0] + "</g>")
+    # the stack: reagent bottles on a shelf screwed into the panel's right wall
+    sy = ry + 120
+    t.append(bottles(ts, p["stack"], tx + 6, sy, tx + tw + 40, xed, uid))
+    t.append(shelf(tx - 6, px + pw - 2, sy, uid + "s", xed, brackets=(tx + 30, px + pw - 50), depth=11))
     content = inner + "".join(t)
     if xed:
-        content += scorch(px + 30, py + ph - 20, 30, 7)
+        content += scorch(px + pw - 80, py + ph - 30, 26, 7)
     s.append(panel(px, py, pw, ph, P["panel"], 11, uid, content))
-    # mess on the borders
     if not xed:
         s.append(tape(px + 30, py + 2, 70, -24) + tape(px + pw - 24, py + ph - 2, 64, -20))
     else:
         s.append(corner_spill(px + pw - 40, py + 2, 41, 1.8, 18))
-        s.append(corner_spill(px + 120, py + ph - 2, 42, 1.2, 11))
     group = "".join(s)
     if xed:
         group = f'<g transform="rotate(-.6 {W / 2} {H / 2})">{group}</g>'
@@ -338,38 +433,43 @@ LEET = dict(handle="Acetylsphae", solved=dict(Easy=30, Medium=1, Hard=0), active
 
 
 def leet(theme, animate=True, v=LEET):
-    """LeetCode on a lab CRT: total solved races up, three difficulty bars fill in steps."""
+    """LeetCode on a lab CRT standing on a desk: total solved races up, three difficulty bars
+    fill in steps. The caption is a plate screwed to the desk front."""
     xed = theme == "dark"
     P = THEME[theme]
     uid = f"lc{theme[0]}{int(animate)}"
     ts = Typesetter(uid)
     W, H = 252, 188
     total = sum(v["solved"].values())
-    inner = []
-    cx, cy = 126, 76
-    sx, sy = cx - 92, cy - 52
-    inner.append(stepped_count(ts, total, "body-bold", 46, sx + 12, sy + 52, P["screen_text"], "start", animate,
-                               attrs=f' stroke="{INK}" stroke-width="0"'))
-    inner.append(ts.text("solved", "body-bold", 13, sx + 14 + text_width(str(total), "body-bold", 46) + 6, sy + 50, P["screen_text"])[0])
     mx = max(v["solved"].values()) or 1
-    for i, (k, col) in enumerate((("Easy", P["easy"]), ("Medium", P["medium"]), ("Hard", P["hard"]))):
-        n = v["solved"][k]
-        by = sy + 66 + i * 12
-        bw = 110 * n / mx
-        inner.append(f'<rect x="{f(sx + 14)}" y="{f(by)}" width="110" height="7" fill="#FFFFFF" opacity=".1"/>')
-        bar = f'<rect x="{f(sx + 14)}" y="{f(by)}" width="{f(max(bw, 2))}" height="7" fill="{col}"/>'
-        if animate and n:
-            bar = (f'<rect x="{f(sx + 14)}" y="{f(by)}" width="{f(max(bw, 2))}" height="7" fill="{col}">'
-                   f'<animate attributeName="width" values="0;{f(bw * .33)};{f(bw * .66)};{f(bw)}" keyTimes="0;.3;.6;.9" calcMode="discrete" dur=".6s" begin="{.5 + i * .1:.1f}s" fill="freeze"/></rect>')
-        inner.append(bar)
-        inner.append(ts.text(f"{k[0]} {n}", "body-bold", 10, sx + 132, by + 7, P["screen_text"])[0])
-    mon = monitor(cx, cy, 200, 124, P, xed, "".join(inner), uid)
-    foot = (ts.text(f"@{v['handle']}", "body-bold", 13, 18, 166, P["text"])[0]
-            + ts.text(f"{v['active']} active days", "body", 12, 232, 166, P["muted"], anchor="end")[0])
-    content = mon + foot
+
+    def screen(sx, sy, sw, sh):
+        g = [stepped_count(ts, total, "body-bold", 40, sx + 12, sy + 42, P["screen_text"], "start", animate),
+             ts.text("solved", "body-bold", 12, sx + 16 + text_width(str(total), "body-bold", 40), sy + 40, P["screen_text"])[0]]
+        for i, (k, col) in enumerate((("Easy", P["easy"]), ("Medium", P["medium"]), ("Hard", P["hard"]))):
+            n = v["solved"][k]
+            by = sy + 54 + i * 11
+            bw = (sw - 66) * n / mx
+            g.append(f'<rect x="{f(sx + 12)}" y="{f(by)}" width="{f(sw - 66)}" height="6" fill="#FFFFFF" opacity=".1"/>')
+            bar = f'<rect x="{f(sx + 12)}" y="{f(by)}" width="{f(max(bw, 2))}" height="6" fill="{col}"'
+            if animate and n:
+                bar += (f'><animate attributeName="width" values="0;{f(bw * .33)};{f(bw * .66)};{f(bw)}" keyTimes="0;.3;.6;.9" '
+                        f'calcMode="discrete" dur=".6s" begin="{.5 + i * .1:.1f}s" fill="freeze"/></rect>')
+            else:
+                bar += "/>"
+            g.append(bar)
+            g.append(ts.text(f"{k[0]} {n}", "body-bold", 9.5, sx + sw - 48, by + 6, P["screen_text"])[0])
+        return "".join(g)
+
+    desk_y = 140
+    content = desk(0, W, desk_y, H, xed)
+    content += monitor(126, desk_y + 1, 196, 112, P, xed, screen, uid)
+    content += label_plate(ts, 22, desk_y + 14, 208, 20, f"@{v['handle']}", f"{v['active']} active days", P)
     if xed:
-        content += scorch(214, 30, 14, 3)
-    s = [panel(6, 6, 238, 172, P["panel"], 23, uid, content)]
+        content += f'<ellipse cx="200" cy="{desk_y + 4}" rx="22" ry="3.5" fill="{C["spill"]}" stroke="{INK}" stroke-width="2"/>'
+        content += f'<path d="M212,{desk_y + 6} v10 a3.5,3.5 0 0 0 7,0 v-10z" fill="{C["spill"]}" stroke="{INK}" stroke-width="2"/>'
+    wall = lab_wall(0, 0, W, desk_y, xed)
+    s = [panel(6, 6, 238, 172, P["panel"], 23, uid, wall + content)]
     if not xed:
         s.append(tape(30, 8, 46, -28))
     else:
@@ -378,12 +478,12 @@ def leet(theme, animate=True, v=LEET):
     if xed:
         group = f'<g transform="rotate(.8 {W / 2} {H / 2})">{group}</g>'
     body = f'<defs>{toon_defs()}</defs>{ts.defs_svg()}' + group
-    label = f"LeetCode @{v['handle']}: {total} problems solved ({v['solved']['Easy']} easy, {v['solved']['Medium']} medium, {v['solved']['Hard']} hard) over {v['active']} active days."
+    label = (f"LeetCode @{v['handle']}: {total} problems solved ({v['solved']['Easy']} easy, {v['solved']['Medium']} medium, "
+             f"{v['solved']['Hard']} hard) over {v['active']} active days.")
     return svg_doc(W, H, body, label)
 
 
 if __name__ == "__main__":
-    import sys
     from notebook import ROOT
     out = ROOT / "lab" / ".runtime" / "preview"
     out.mkdir(parents=True, exist_ok=True)
