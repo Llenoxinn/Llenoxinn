@@ -280,7 +280,6 @@ def project_card(p, theme, animate=True, order=0):
     s.append(drawer_lamp(W - 25, H / 2 - 3, lamp_col, animate, begin + .45))
     s.append(f'<rect x="{W - 31}" y="{H / 2 + 10}" width="12" height="20" rx="3" fill="{STEEL_LT}" stroke="{INK}" stroke-width="2"/>')   # drawer pull
     if xed:
-        s.append(scorch(30, H - 12, 10, len(p["name"])))
         if len(p["name"]) % 2:
             s.append(kid.splat(W - 22, 14, 6, len(p["name"]) + 40, drips=1, run=1.2))
     s.append(tooth(W, H))
