@@ -176,7 +176,8 @@ def bottle(ts, x, base, key, name, cap, liquid, xed=False, tipped=False, uid="b"
          label,
          fold([(x + 6, y + 16), (x + 5, y + 30)], 2.4, "#FFFFFF")]
     if tipped:  # XED cracked this one: a split in the glass, leaking onto the plank
-        g.append(f'<path d="M{x + w - 8},{y + 14} l-6,10 l5,6 l-7,12" fill="none" stroke="{INK}" stroke-width="2"/>')
+        g.append(f'<path d="M{f(x + w - 4)},{f(y + 12)} l-4,4 l2,3 l-3,3" fill="none" stroke="{INK}" stroke-width="1.4" stroke-linejoin="round"/>'
+                 f'<path d="M{f(x + w - 3)},{f(y + 12.6)} l-4,4 l2,3 l-3,3" fill="none" stroke="#FFFFFF" stroke-width=".8" opacity=".8"/>')
         g.append(f'<path d="M{x + w - 14},{base - 2} q14,-3 30,1 v4 q-14,2 -30,1z" fill="{liquid}" stroke="{INK}" stroke-width="2"/>')
         g.append(f'<path d="M{x + w + 8},{base + 9} v12 a3.6,3.6 0 0 0 7.2,0 v-12z" fill="{liquid}" stroke="{INK}" stroke-width="2"/>')
     return "".join(g), w
@@ -337,6 +338,9 @@ def desk(x0, x1, y, bottom, xed):
             f'<rect x="{f(x0)}" y="{f(y)}" width="{f(x1 - x0)}" height="8" fill="{top}" stroke="{INK}" stroke-width="3"/>')
 
 
+STEEL_C = "#9AA3B8"
+
+
 def studio(cx, floor, s, xed, animate, uid):
     """PlacebAIStudio on a bench: a studio monitor whose woofer pumps, and the level meter it is
     wired to, which never moves. The plug in the monitor's input jack is a pill. Every effect
@@ -363,9 +367,8 @@ def studio(cx, floor, s, xed, animate, uid):
     out.append(cone)
     # input jack on the cabinet's left side, with the pill pushed into it
     jx, jy = cx - 40 * s, cy + ch * .36
-    jack_r = 11 * s   # a round metal socket on the cabinet's side (drawn here, its front lip after the pill)
-    out.append(f'<circle cx="{f(jx + 2)}" cy="{f(jy)}" r="{f(jack_r)}" fill="#9AA3B8" stroke="{INK}" stroke-width="2.6"/>'
-               f'<circle cx="{f(jx + 2)}" cy="{f(jy)}" r="{f(jack_r * .55)}" fill="{INK}"/>')
+    jack_r = 11 * s   # a round metal socket on the cabinet's face
+    out.append(f'<ellipse cx="{f(jx + 4)}" cy="{f(jy)}" rx="{f(5 * s)}" ry="{f(jack_r + 2)}" fill="{INK}" opacity=".6"/>')   # the jack's dark recess
     # meter rack standing on the bench to the left
     mw, mh = 36 * s, 128 * s
     mx = cx - 112 * s
@@ -381,19 +384,21 @@ def studio(cx, floor, s, xed, animate, uid):
              f"{f(jx - 50 * s)},{f(jy)}")
     out.append(f'<path d="{cable}" fill="none" stroke="{INK}" stroke-width="{f(9 * s)}" stroke-linecap="round"/>'
                f'<path d="{cable}" fill="none" stroke="{C["crimson"]}" stroke-width="{f(3.6 * s)}" stroke-linecap="round"/>')
-    # the pill: a two-tone capsule whose crimson end is pushed into the socket
-    px0, px1 = jx - 50 * s, jx + 2
-    mid = (px0 + px1) / 2
-    pill = rpoly([(px0, jy - 10 * s), (px1, jy - 10 * s), (px1, jy + 10 * s), (px0, jy + 10 * s)], 10 * s)
-    halves = (f'<rect x="{f(mid)}" y="{f(jy - 14 * s)}" width="{f(px1 - mid + 4)}" height="{f(28 * s)}" fill="{C["crimson"]}"/>'
-              f'<rect x="{f(px0 - 4)}" y="{f(jy + 3 * s)}" width="{f(px1 - px0 + 8)}" height="{f(10 * s)}" fill="{INK}" opacity=".14"/>')
-    out.append(inked(pill, C["bone"], 2.8, extra=clipped(f"pl{uid}", pill, halves)))
-    out.append(f'<path d="M{f(mid)},{f(jy - 10 * s)} V{f(jy + 10 * s)}" stroke="{INK}" stroke-width="2.4"/>')
-    out.append(fold([(px0 + 7 * s, jy - 5 * s), (mid - 5 * s, jy - 6 * s)], 2.6, "#FFFFFF"))
-    out.append(fold([(mid + 5 * s, jy - 5 * s), (px1 - 9 * s, jy - 6 * s)], 2.2, "#FF8A9C"))
-    # the socket's front lip closes over the capsule's tip
-    out.append(f'<path d="M{f(jx + 2 - jack_r * .2)},{f(jy - jack_r)} A{f(jack_r)},{f(jack_r)} 0 0 1 {f(jx + 2 - jack_r * .2)},{f(jy + jack_r)}" '
-               f'fill="#9AA3B8" stroke="{INK}" stroke-width="2.6"/>')
+    # the pill: a glossy two-part capsule, its crimson cap sleeved over the cream body,
+    # the cap's tip pushed into the jack and gripped by a metal collar
+    r = 10 * s
+    px0, px1 = jx - 52 * s, jx + 4
+    seam = px0 + (px1 - px0) * .48
+    body = rpoly([(px0, jy - r), (seam + 4, jy - r), (seam + 4, jy + r), (px0, jy + r)], [r, 1, 1, r])
+    cap = rpoly([(seam - 1, jy - r - 1.2), (px1, jy - r - 1.2), (px1, jy + r + 1.2), (seam - 1, jy + r + 1.2)], [3, r + 1, r + 1, 3])
+    shade = lambda d, col: f'<path d="M{f(px0 - 4)},{f(jy + r * .25)} H{f(px1 + 4)} V{f(jy + r + 4)} H{f(px0 - 4)}Z" fill="{col}"/>'
+    out.append(inked(body, "#F4ECD8", 2.6, extra=clipped(f"pb{uid}", body, shade(body, "#D9CBAA"))))
+    out.append(inked(cap, C["crimson"], 2.6, extra=clipped(f"pc{uid}", cap, shade(cap, C["crimson_dk"]))))
+    out.append(fold([(px0 + r * .7, jy - r * .5), ((px0 + seam) / 2, jy - r * .62), (seam - 4, jy - r * .5)], 3, "#FFFFFF"))
+    out.append(fold([(seam + 5, jy - r * .55), ((seam + px1) / 2, jy - r * .66), (px1 - r * .9, jy - r * .5)], 3, "#FF8A9C"))
+    # metal collar round the cap's tip, where it enters the jack
+    out.append(f'<ellipse cx="{f(jx + 2)}" cy="{f(jy)}" rx="{f(4 * s)}" ry="{f(r + 3)}" fill="{STEEL_C}" stroke="{INK}" stroke-width="2.4"/>'
+               f'<path d="M{f(jx + .5)},{f(jy - r)} V{f(jy - r * .2)}" stroke="#FFFFFF" stroke-width="1.4" opacity=".8"/>')
     if xed:
         out.append(scorch(cx + 18 * s, cy - ch * .38, 16 * s, 4))
         out.append(f'<path d="M{f(cx - 30 * s)},{f(cy - ch * .48)} l10,18 l-8,10 l12,16" fill="none" stroke="{C["bone"]}" stroke-width="2.2"/>')
