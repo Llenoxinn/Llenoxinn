@@ -195,6 +195,33 @@ def bottles(ts, stack, x, base, room, xed, uid, gap=10):
     return "".join(out)
 
 
+def rubber_stamp(ts, x, y, ink, uid, top="PRIVATE REPO", bottom="LIVE DEMO"):
+    """A rubber stamp pressed onto the wall: double border, a padlock, two lines of spaced
+    capitals, the ink worn through in specks where the stamp didn't bite."""
+    t1, t2 = 14.5, 10.5
+    tr1, tr2 = 1.6, 2.4
+    w1 = text_width(top, "body-bold", t1, tr1)
+    w2 = text_width(bottom, "body-bold", t2, tr2)
+    lock = 22
+    w = max(w1, w2) + lock + 30
+    h = 46
+    cx = x + lock + 16 + max(w1, w2) / 2
+    lx, ly = x + 14, y + h / 2
+    padlock = (f'<path d="M{f(lx - 5)},{f(ly - 3)} v-4 a5,5 0 0 1 10,0 v4" fill="none" stroke="{ink}" stroke-width="2.4"/>'
+               f'<rect x="{f(lx - 8)}" y="{f(ly - 3)}" width="16" height="12" rx="2" fill="{ink}"/>'
+               f'<circle cx="{f(lx)}" cy="{f(ly + 2)}" r="1.8" fill="#000" opacity=".6"/>')
+    g = (f'<path d="{wobble_rect(x, y, w, h, 9, .7)}" fill="none" stroke="{ink}" stroke-width="3"/>'
+         f'<path d="{wobble_rect(x + 4.5, y + 4.5, w - 9, h - 9, 10, .5)}" fill="none" stroke="{ink}" stroke-width="1.3"/>'
+         f'<path d="M{f(x + lock + 8)},{f(y + 9)} V{f(y + h - 9)}" stroke="{ink}" stroke-width="1.3"/>'
+         + padlock
+         + ts.text(top, "body-bold", t1, cx, y + 23, ink, anchor="middle", tracking=tr1)[0]
+         + f'<path d="M{f(cx - max(w1, w2) / 2)},{f(y + 27.5)} H{f(cx + max(w1, w2) / 2)}" stroke="{ink}" stroke-width="1.2"/>'
+         + ts.text(bottom, "body-bold", t2, cx, y + 39, ink, anchor="middle", tracking=tr2)[0])
+    wear = (f'<filter id="sw{uid}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="7"/>'
+            f'<feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -4 3.3"/><feComposite in="SourceGraphic" operator="in"/></filter>')
+    return f'{wear}<g transform="rotate(-4 {f(x + w / 2)} {f(y + h / 2)})" opacity="1"><g filter="url(#sw{uid})">{g}</g></g>'
+
+
 def pushpin(x, y):
     return (f'<ellipse cx="{f(x + 2)}" cy="{f(y + 3)}" rx="7" ry="3" fill="{INK}" opacity=".35"/>'
             f'<circle cx="{f(x)}" cy="{f(y)}" r="7" fill="{C["crimson"]}" stroke="{INK}" stroke-width="2.4"/>'
@@ -480,10 +507,10 @@ def feature(theme, layout="wide", animate=True):
     uid = f"f{layout[0]}{theme[0]}{int(animate)}"
     ts = Typesetter(uid)
     if wide:
-        W, H = 760, 340
-        floor = 292
+        W, H = 760, 356
+        floor = 306
         ax0, ax1, atop = 44, 304, 34
-        tx, tw, ty = 352, 320, 28
+        tx, tw, ty = 352, 320, 30
         tank_c = (-40, -40, 150)
         pipe_x = W - 42
         lamp_x = 640
@@ -537,12 +564,8 @@ def feature(theme, layout="wide", animate=True):
                   f'fill="{C["spill"]}" stroke="{INK}" stroke-width="2.6"/>')
         sc.append(f'<ellipse cx="{f(lx_ + 4)}" cy="{f(floor + 10)}" rx="34" ry="6" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.6"/>')
     # the words, painted onto the wall under the lamp
-    st = p["where"]
-    sw_ = text_width(st, "body-bold", 12.5) + 20
-    ink_c = C["gold"] if not xed else C["phoenix"]
-    sc.append(f'<g transform="rotate(-3 {f(tx + sw_ / 2)} {f(ty + 12)})"><path d="{wobble_rect(tx, ty, sw_, 26, 9, .8)}" fill="none" stroke="{ink_c}" stroke-width="2.6"/>'
-              + ts.text(st, "body-bold", 12.5, tx + 10, ty + 17.5, ink_c)[0] + "</g>")
-    yy = ty + 66
+    sc.append(rubber_stamp(ts, tx, ty - 14, C["gold"] if not xed else C["phoenix"], uid))
+    yy = ty + 72
     sc.append(ts.text(p["name"], "body-bold", 34 if wide else 31, tx, yy, P["text"],
                       attrs=f' stroke="{INK}" stroke-width="5" stroke-linejoin="round" paint-order="stroke"')[0])
     yy += 28
