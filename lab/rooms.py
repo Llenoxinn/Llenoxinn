@@ -382,23 +382,26 @@ SHELF = [
 
 
 def jar(cx, base, name, k, xed, uid):
-    """A squat reagent jar carrying the tool's logo on its label (name in the alt text)."""
+    """A round-shouldered reagent jar standing on the plank (foot pressed 2 px in): glass body
+    with the liquid clipped inside it, a neck and a coloured cap, and a paper label carrying
+    the tool's logo (its name goes in the alt text)."""
     from icons import ICONS
     from notebook import mark
-    w, h = 40, 44
+    w, h = 34, 40
     x, y = cx - w / 2, base - h + 2
     caps = (C["crimson"], C["gold"], C["phoenix"], C["prussian"])
     liq = (C["spill"], C["phoenix"], "#8FD3FF", C["gold"])[k % 4]
-    body = rpoly([(x, y + 10), (x + w, y + 10), (x + w, y + h), (x, y + h)], [9, 9, 4, 4])
-    out = [inked(body, "#CFE6EA", 2.4, extra=f'<rect x="{x - 2}" y="{f(y + h * .55)}" width="{w + 4}" height="{h}" fill="{liq}"/>'),
-           inked(rpoly([(cx - 11, y), (cx + 11, y), (cx + 11, y + 10), (cx - 11, y + 10)], 3), caps[k % 4], 2.2),
-           f'<rect x="{x + 6}" y="{y + 15}" width="{w - 12}" height="24" rx="2" fill="{C["bone"]}" stroke="{INK}" stroke-width="1.6"/>']
-    key = name.lower()
-    if key in ICONS:
-        out.append(mark(name, cx - 9, y + 18, 18, INK))
-    else:
-        out.append(f'<text x="{f(cx)}" y="{y + 31}" font-size="7" text-anchor="middle">?</text>')
-    out.append(fold([(x + 4, y + 14), (x + 3, y + 30)], 2.2, "#FFFFFF"))
+    body = rpoly([(x, y + 9), (x + w, y + 9), (x + w, y + h), (x, y + h)], [10, 10, 5, 5])
+    neck = rpoly([(cx - 7, y + 2), (cx + 7, y + 2), (cx + 7, y + 11), (cx - 7, y + 11)], 2)
+    cap = rpoly([(cx - 9, y - 4), (cx + 9, y - 4), (cx + 9, y + 4), (cx - 9, y + 4)], 3)
+    inside = (f'<rect x="{f(x - 4)}" y="{f(y + h * .5)}" width="{w + 8}" height="{h}" fill="{liq}"/>'
+              f'<path d="M{f(x - 4)},{f(y + h * .5)} H{f(x + w + 4)}" stroke="#FFFFFF" stroke-width="1.4" opacity=".6"/>')
+    out = [inked([body, neck], "#D8EEF2", 2.4, extra=clipped(f"jr{uid}", body, inside)),
+           inked(cap, caps[k % 4], 2.2),
+           f'<rect x="{f(x + 5)}" y="{f(y + 15)}" width="{w - 10}" height="21" rx="2" fill="{C["bone"]}" stroke="{INK}" stroke-width="1.6"/>']
+    if name.lower() in ICONS:
+        out.append(mark(name, cx - 8, y + 17.5, 16, INK))
+    out.append(fold([(x + 3.5, y + 14), (x + 3, y + 32)], 2.2, "#FFFFFF"))
     return "".join(out)
 
 
@@ -406,11 +409,13 @@ def cabinet(theme, layout="wide", animate=True):
     xed = theme == "dark"
     wide = layout == "wide"
     W = 760 if wide else 400
-    per = 16 if wide else 8
+    per = 14 if wide else 8
     rows = []
     for g, names in SHELF:
-        for i in range(0, len(names), per):
-            rows.append((g if i == 0 else "", names[i:i + per]))
+        n_rows = -(-len(names) // per)
+        size = -(-len(names) // n_rows)   # split evenly: 12 -> 6 + 6, 9 -> 5 + 4
+        for i in range(0, len(names), size):
+            rows.append((g if i == 0 else "", names[i:i + size]))
     if wide:  # pack short groups side by side on one plank
         packed, cur = [], []
         for g, names in rows:
@@ -432,15 +437,16 @@ def cabinet(theme, layout="wide", animate=True):
     k = 0
     for r, groups in enumerate(packed):
         base = 22 + 56 + r * row_h
-        x = 22
+        pitch = 50 if wide else 44
+        row_w = sum(len(n) * pitch for _, n in groups) + 36 * (len(groups) - 1)
+        x = (W - row_w) / 2
         for gi, (g, names) in enumerate(groups):
-            span = len(names) * 44
+            span = len(names) * pitch
             if gi:
-                x += 30
-            s.append(shelf(x - 8, x + span + 4, base, f"{uid}{r}{gi}", xed, brackets=(x + 16, x + span - 20), depth=11,
-                           sag_right=xed and r == 1 and gi == 0))
+                x += 36
+            s.append(shelf(x - 6, x + span + 6, base, f"{uid}{r}{gi}", xed, brackets=(x + 18, x + span - 18), depth=11))
             for j, n in enumerate(names):
-                s.append(jar(x + 20 + j * 44, base + 1, n, k, xed, f"{uid}{k}"))
+                s.append(jar(x + pitch / 2 + j * pitch, base + 1, n, k, xed, f"{uid}{k}"))
                 labels.append(n)
                 k += 1
             if g:
@@ -449,8 +455,8 @@ def cabinet(theme, layout="wide", animate=True):
                          + ts.text(g.upper(), "body-bold", 8.6, x + 7, base + 23.6, INK, tracking=1)[0])
             x += span
     if xed:
-        s.append(kid.splat(W * .62, 16, 10, 91, drips=3, run=3))
-        s.append(scorch(W * .2, H - 20, 20, 5))
+        s.append(kid.splat(W - 20, 16, 9, 91, drips=2, run=3))
+        s.append(scorch(W - 30, H - 24, 16, 5))
     s.append(tooth(W, H))
     return doc(W, H, "".join(s), ts, "Stack: " + ", ".join(labels) + ".")
 
