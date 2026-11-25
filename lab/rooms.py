@@ -31,16 +31,23 @@ def bolt(x, y, r=3.2):
 
 
 def brass_plate(ts, x, y, w, h, lines, uid):
-    """An engraved brass plate screwed on at both ends. lines: [(text, size, bold)]"""
+    """An engraved brass plate screwed on at both ends. The darker lower band and the shine are
+    clipped to the plate; the lines are centred in the room between the screws.
+    lines: [(text, size, bold)]"""
     d = rpoly([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], 3)
+    band_y = y + h * .56
+    inner = (f'<rect x="{f(x - 2)}" y="{f(band_y)}" width="{f(w + 4)}" height="{f(h)}" fill="{C["gold_sh"]}" opacity=".6"/>'
+             f'<path d="M{f(x - 2)},{f(band_y)} H{f(x + w + 2)}" stroke="{C["gold_dk"]}" stroke-width="1" opacity=".7"/>'
+             f'<path d="M{f(x + w * .62)},{f(y)} h10 l-16,{h} h-10z" fill="#FFFFFF" opacity=".25"/>')
     out = [f'<path d="{d}" fill="{INK}" transform="translate(3 3)"/>',
-           inked(d, C["gold"], 2.2, extra=f'<rect x="{f(x)}" y="{f(y + h * .58)}" width="{f(w)}" height="{f(h)}" fill="{C["gold_sh"]}" opacity=".6"/>'
-                 + f'<path d="M{f(x + w * .6)},{f(y)} h10 l-16,{h} h-10z" fill="#FFFFFF" opacity=".25"/>'),
-           bolt(x + 6, y + h / 2, 2.2), bolt(x + w - 6, y + h / 2, 2.2)]
-    yy = y + 3
+           inked(d, C["gold"], 2.2, extra=clipped(f"bp{uid}", d, inner)),
+           bolt(x + 9, y + h / 2, 2.4), bolt(x + w - 9, y + h / 2, 2.4)]
+    total = sum(size for _, size, _ in lines) + 4 * (len(lines) - 1)
+    yy = y + (h - total) / 2 - 1
     for text, size, bold in lines:
-        yy += size + 3
+        yy += size
         out.append(ts.text(text, "body-bold" if bold else "body", size, x + w / 2, yy, "#4A2E0A", anchor="middle")[0])
+        yy += 4
     return "".join(out)
 
 

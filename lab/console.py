@@ -223,7 +223,7 @@ def spark(x, y, animate):
             f'dur="3.2s" begin="1.6s" repeatCount="indefinite"/>{s}</g>')
 
 
-TILE_W, TILE_H = 252, 300
+TILE_W, TILE_H = 252, 308
 DATA = ROOT / "lab" / "data"
 
 
@@ -270,8 +270,8 @@ def tile(kind, theme, animate=True):
         label = f"picoGym @{user}: {total} challenges solved. " + ", ".join(f"{k} {n}" for k, n in per if n) + "."
     s.append(art)
     a, b = plate
-    pw = max(text_width(a, "body-bold", 12.5), text_width(b, "body", 10.5)) + 40
-    s.append(brass_plate(ts, W / 2 - pw / 2, base + 18, pw, 36, [(a, 12.5, True), (b, 10.5, False)], uid))
+    pw = 212   # the same plate on every tile, screws clear of the longest line
+    s.append(brass_plate(ts, W / 2 - pw / 2, base + 18, pw, 42, [(a, 13, True), (b, 10, False)], uid))
     if xed:
         if kind == "github":
             s.append(f'<ellipse cx="{W - 40}" cy="{base + 6}" rx="26" ry="4.5" fill="{C["spill"]}" stroke="{INK}" stroke-width="2.4"/>'
