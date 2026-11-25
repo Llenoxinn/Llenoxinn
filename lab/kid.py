@@ -13,6 +13,7 @@ Drawn in a 600 x 700 local box, head centred on x 300. `kid(xed, uid)` draws the
 standing sheet pose; `head(xed, uid)` is reusable for other poses.
 """
 import math
+import random
 
 from toon import INK, PHOENIX as C, clipped, f, fold, inked, limb, rpoly, smooth
 
@@ -43,32 +44,97 @@ def fringe(xed):
     return rpoly(pts, [4, 2, 6, 2, 6, 2, 6, 2, 6, 2, 6, 2, 6, 2, 6, 2, 4, 30, 30, 30])
 
 
+def lens_path(cx):
+    return rpoly([(cx - 54, 222), (cx + 54, 222), (cx + 50, 266), (cx + 32, 284), (cx - 32, 284), (cx - 50, 266)], [4, 4, 16, 14, 14, 16])
+
+
+def spiderweb(ix, iy, seed):
+    """Impact crack: kinked radial lines plus broken rings around the hit."""
+    rnd = random.Random(seed)
+    s = []
+    for i in range(9):
+        a = i / 9 * math.tau + rnd.uniform(-.2, .2)
+        pts, r = [(ix, iy)], 0
+        while r < 80:
+            r += rnd.uniform(12, 22)
+            a2 = a + rnd.uniform(-.18, .18)
+            pts.append((ix + math.cos(a2) * r, iy + math.sin(a2) * r))
+        s.append("M" + " L".join(f"{f(x)},{f(y)}" for x, y in pts))
+    for rr in (9, 19, 31):
+        for i in range(6):
+            if rnd.random() < .7:
+                a0 = i / 6 * math.tau + rnd.uniform(0, .3)
+                a1 = a0 + rnd.uniform(.5, .9)
+                s.append(f"M{f(ix + math.cos(a0) * rr)},{f(iy + math.sin(a0) * rr)} L{f(ix + math.cos(a1) * rr)},{f(iy + math.sin(a1) * rr)}")
+    d = " ".join(s)
+    return (f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+            f'<path d="{d}" fill="none" stroke="#FFFFFF" stroke-width=".9" opacity=".75" transform="translate(1.2 -.8)"/>')
+
+
+def hole(cx, cy, r, seed):
+    rnd = random.Random(seed)
+    pts = []
+    for i in range(16):
+        a = i / 16 * math.tau
+        rr = r * (rnd.uniform(.55, 1.0) if i % 2 else rnd.uniform(.95, 1.3))
+        pts.append((cx + math.cos(a) * rr * 1.15, cy + math.sin(a) * rr))
+    return "M" + " L".join(f"{f(x)},{f(y)}" for x, y in pts) + "Z"
+
+
+def shard(x, y, sc, rot):
+    d = f"M{f(x)},{f(y)} l{f(10 * sc)},{f(-14 * sc)} l{f(8 * sc)},{f(16 * sc)} l{f(-12 * sc)},{f(6 * sc)}z"
+    return (f'<g transform="rotate({rot} {f(x)} {f(y)})"><path d="{d}" fill="{GLASS}" stroke="{INK}" stroke-width="2.4" stroke-linejoin="round"/>'
+            + fold([(x + 4 * sc, y - 4 * sc), (x + 9 * sc, y - 10 * sc)], 2, "#FFFFFF") + "</g>")
+
+
 def glasses(xed):
     s = []
-    tilt = ' transform="rotate(-5 300 230)"' if xed else ""
-    s.append(f"<g{tilt}>")
-    # lens fill (tinted glass) and thin lower rims
-    for sx in (-1, 1):
-        cx = 300 + sx * 58
-        lens = rpoly([(cx - 54, 222), (cx + 54, 222), (cx + 50, 266), (cx + 32, 284), (cx - 32, 284), (cx - 50, 266)], [4, 4, 16, 14, 14, 16])
-        s.append(f'<path d="{lens}" fill="{GLASS}" opacity=".28"/>')
-        s.append(f'<path d="{lens}" fill="none" stroke="{INK}" stroke-width="3.2" stroke-linejoin="round"/>')
-        # glint
-        s.append(fold([(cx + 26, 226), (cx + 36, 240), (cx + 40, 256)], 3.6, "#FFFFFF", .85))
-    # thick browline bars, angled into a scowl (inner ends low)
-    lb = rpoly([(182, 206), (296, 224), (296, 242), (184, 226)], 7)
-    rb = rpoly([(304, 224), (418, 206), (416, 226), (304, 242)], 7)
-    if xed:  # one brow cocked up: the grin of someone about to break something
-        rb = rpoly([(304, 200), (418, 186), (416, 206), (304, 220)], 7)
-        lb = rpoly([(182, 200), (296, 206), (296, 224), (184, 220)], 7)
-    s.append(f'<path d="{lb}" fill="{INK}"/><path d="{rb}" fill="{INK}"/>')
-    s.append(fold([(196, 204), (240, 210), (284, 218)], 2.4, HAIR_HI, .9))
-    s.append(f'<path d="M292,222 Q300,216 308,222" fill="none" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>')
-    s.append(f'<path d="M186,210 L166,228" stroke="{INK}" stroke-width="6" stroke-linecap="round"/><path d="M414,210 L434,228" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>')
-    if xed:  # cracked right lens
-        s.append(f'<path d="M372,218 L380,240 L368,252 L384,272 M380,240 L398,246" fill="none" stroke="{INK}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>')
-        s.append(f'<path d="M372,218 L380,240 L368,252 L384,272" fill="none" stroke="#FFFFFF" stroke-width="1" opacity=".7" transform="translate(1.5 0)"/>')
+    if not xed:
+        for sx in (-1, 1):
+            cx = 300 + sx * 58
+            lens = lens_path(cx)
+            s.append(f'<path d="{lens}" fill="{GLASS}" opacity=".28"/>')
+            s.append(f'<path d="{lens}" fill="none" stroke="{INK}" stroke-width="3.2" stroke-linejoin="round"/>')
+            s.append(fold([(cx + 26, 226), (cx + 36, 240), (cx + 40, 256)], 3.6, "#FFFFFF", .85))
+        lb = rpoly([(182, 206), (296, 224), (296, 242), (184, 226)], 7)
+        rb = rpoly([(304, 224), (418, 206), (416, 226), (304, 242)], 7)
+        s.append(f'<path d="{lb}" fill="{INK}"/><path d="{rb}" fill="{INK}"/>')
+        s.append(fold([(196, 204), (240, 210), (284, 218)], 2.4, HAIR_HI, .9))
+        s.append(f'<path d="M292,222 Q300,216 308,222" fill="none" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>')
+        s.append(f'<path d="M186,210 L166,228" stroke="{INK}" stroke-width="6" stroke-linecap="round"/><path d="M414,210 L434,228" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>')
+        return "".join(s)
+    # XED: knocked crooked, one lens spider-webbed, the other blown out, bridge snapped and taped
+    s.append('<g transform="rotate(-6 300 230)">')
+    ll, rl = lens_path(242), lens_path(358)
+    s.append(f'<path d="{ll}" fill="{GLASS}" opacity=".3"/>')
+    s.append(clipped("webL", ll, spiderweb(222, 246, 3)))
+    s.append(f'<path d="{ll}" fill="none" stroke="{INK}" stroke-width="3.2" stroke-linejoin="round"/>')
+    # right lens: a jagged hole where the glass used to be, cracks running out from it
+    hd = hole(362, 252, 24, 8)
+    s.append(f'<path d="{rl} {hd}" fill="{GLASS}" fill-rule="evenodd" opacity=".34"/>')
+    s.append(f'<clipPath id="webR"><path d="{rl} {hd}" clip-rule="evenodd"/></clipPath>'
+             f'<g clip-path="url(#webR)">{spiderweb(362, 252, 11).replace(chr(34) + "2" + chr(34), chr(34) + "1.7" + chr(34), 1)}</g>')
+    s.append(f'<path d="{hd}" fill="none" stroke="{INK}" stroke-width="2.6" stroke-linejoin="round"/>')
+    s.append(f'<path d="{hd}" fill="none" stroke="#FFFFFF" stroke-width="1" opacity=".8" transform="translate(1.4 1.2)"/>')
+    # the rim popped open at the bottom corner
+    s.append(f'<path d="{rl}" fill="none" stroke="{INK}" stroke-width="3.2" stroke-linejoin="round" stroke-dasharray="210 26 400"/>')
+    # brow bars: left cocked up, right cracked through with a gap
+    lb = rpoly([(182, 200), (296, 206), (296, 224), (184, 220)], 7)
+    rb1 = rpoly([(304, 200), (352, 194), (348, 214), (304, 220)], 5)
+    rb2 = rpoly([(360, 190), (418, 182), (416, 202), (356, 210)], 5)
+    s.append(f'<path d="{lb}" fill="{INK}"/><path d="{rb1}" fill="{INK}"/><path d="{rb2}" fill="{INK}" transform="rotate(7 360 200)"/>')
+    s.append(f'<path d="M350,192 l6,6 l-5,5 l6,7" fill="none" stroke="{INK}" stroke-width="2.4"/>')
+    # bridge snapped and wrapped in white tape
+    s.append(f'<path d="M292,216 Q300,210 308,216" fill="none" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>')
+    s.append(f'<g transform="rotate(-14 300 214)"><rect x="288" y="202" width="24" height="22" rx="3" fill="#F4EFE2" stroke="{INK}" stroke-width="3"/>'
+             f'<path d="M294,204 v18 M300,203 v20 M306,204 v18" stroke="#C9BFA8" stroke-width="1.6"/></g>')
+    # left arm fine, right arm snapped: a stub at the hinge, the rest dangling by the ear
+    s.append(f'<path d="M186,206 L166,224" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>')
+    s.append(f'<path d="M414,192 L424,198" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>')
     s.append("</g>")
+    s.append(f'<path d="M438,236 L446,270" stroke="{INK}" stroke-width="6" stroke-linecap="round"/>')
+    # shards falling past the cheek
+    s.append(shard(392, 300, 1, 20) + shard(408, 336, .7, -30) + shard(376, 352, .55, 60))
     return "".join(s)
 
 
@@ -169,6 +235,38 @@ def arm(sx, xed, uid):
     return "".join(s)
 
 
+SPILL_DK, SPILL_HI = C["spill_dk"], C["spill_hi"]
+
+
+def splat(cx, cy, r, seed, drips=2, run=1.0):
+    """Acid splash: a lumpy blob, runs that drip downward and end in a hanging drop,
+    satellite droplets thrown outward, one hard shadow step and a wet highlight."""
+    rnd = random.Random(seed)
+    n = 11
+    pts = [(cx + math.cos(i / n * math.tau) * r * rnd.uniform(.62, 1.15),
+            cy + math.sin(i / n * math.tau) * r * rnd.uniform(.55, 1.0)) for i in range(n)]
+    blob = smooth(pts)
+    runs = []
+    for k in range(drips):
+        x = cx + rnd.uniform(-.6, .6) * r
+        ln = rnd.uniform(.9, 2.0) * r * run
+        wd = rnd.uniform(.18, .3) * r
+        runs.append(f"M{f(x - wd)},{f(cy)} V{f(cy + ln)} a{f(wd)},{f(wd)} 0 0 0 {f(2 * wd)},0 V{f(cy)}Z")
+        runs.append(f"M{f(x)},{f(cy + ln + wd * 1.6)} m{f(-wd * .8)},0 a{f(wd * .8)},{f(wd * .9)} 0 1 0 {f(wd * 1.6)},0 a{f(wd * .8)},{f(wd * .9)} 0 1 0 {f(-wd * 1.6)},0")
+    dots = []
+    for k in range(rnd.randint(3, 5)):
+        a = rnd.uniform(0, math.tau)
+        d = r * rnd.uniform(1.3, 1.9)
+        rr = r * rnd.uniform(.08, .16)
+        dots.append(f"M{f(cx + math.cos(a) * d - rr)},{f(cy + math.sin(a) * d * .8)} a{f(rr)},{f(rr)} 0 1 0 {f(2 * rr)},0 a{f(rr)},{f(rr)} 0 1 0 {f(-2 * rr)},0")
+    shapes = [blob] + runs + dots
+    under = "".join(f'<path d="{d}" fill="{INK}" stroke="{INK}" stroke-width="5.6" stroke-linejoin="round"/>' for d in shapes)
+    top = "".join(f'<path d="{d}" fill="{SPILL}"/>' for d in shapes)
+    shade = f'<path d="M{f(cx - r * 1.4)},{f(cy + r * .25)} Q{f(cx)},{f(cy + r * .55)} {f(cx + r * 1.4)},{f(cy + r * .1)} V{f(cy + r * 3 * run)} H{f(cx - r * 1.4)}Z" fill="{SPILL_DK}" opacity=".55"/>'
+    hi = fold([(cx - r * .55, cy - r * .3), (cx - r * .2, cy - r * .55), (cx + r * .2, cy - r * .5)], max(2.2, r * .16), SPILL_HI)
+    return f'{under}<g filter="url(#grain)">{top}{clipped(f"sp{seed}", blob, shade)}</g>{hi}'
+
+
 def body(xed, uid):
     s = []
     for sx in (-1, 1):
@@ -205,11 +303,18 @@ def body(xed, uid):
     s.append(f'<path d="M316,474 L356,474 L356,502 Q336,522 316,502Z" fill="{ORANGE}" stroke="{INK}" stroke-width="3.4" stroke-linejoin="round"/>')
     s.append(f'<path d="M336,510 C325,500 325,490 331,480 C333,490 337,492 339,486 C345,492 347,502 336,510Z" fill="{GOLD}" stroke="{INK}" stroke-width="2.2" stroke-linejoin="round"/>')
     if xed:
-        s.append(f'<path d="M232,548 Q250,528 272,540 Q290,532 294,556 Q300,574 284,582 L282,612 Q276,620 272,610 L270,586 Q254,592 242,582 L240,606 Q234,614 230,604 Z" fill="{SPILL}" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/>')
-        s.append(fold([(250, 552), (262, 546), (276, 550)], 3, "#E9FFB8"))
-        s.append(f'<path d="M368,560 l8,-10 l6,8 l10,-4 l-2,12 l8,6 l-12,4 l-2,10 l-8,-6 l-10,4 l2,-10 l-8,-6z" fill="{INK}"/>')
+        s.append(f'<path d="M384,452 l8,-10 l6,8 l10,-4 l-2,12 l8,6 l-12,4 l-2,10 l-8,-6 l-10,4 l2,-10 l-8,-6z" fill="{INK}"/>')
+        s.append(splat(258, 556, 30, 11, drips=3, run=1.3))     # big soak low on the coat, running off the hem
+        s.append(splat(352, 540, 18, 12, drips=2, run=1.6))
+        s.append(splat(276, 404, 16, 13, drips=2))              # splash on the lapel
+        # the pocket overflows: ooze over the lip and down the coat
+        s.append(splat(246, 478, 14, 14, drips=3, run=1.4))
     s.append(arm(-1, xed, uid))
     s.append(arm(1, xed, uid))
+    if xed:
+        s.append(splat(178, 436, 13, 15, drips=1))              # left sleeve
+        s.append(splat(410, 548, 10, 16, drips=1, run=.8))      # right gauntlet
+        s.append(splat(250, 650, 9, 17, drips=0))               # left sneaker
     return "".join(s)
 
 
@@ -243,6 +348,9 @@ def head(xed, uid):
     s.append(eyes(xed, uid))
     s.append(fold([(296, 270), (308, 286), (294, 292)], 3.4))
     s.append(mouth(xed))
+    if xed:
+        for x, y, r in ((392, 286, 4.5), (402, 300, 3), (214, 318, 3.6)):
+            s.append(f'<circle cx="{x}" cy="{y}" r="{r + 2.6}" fill="{INK}"/><circle cx="{x}" cy="{y}" r="{r}" fill="{SPILL}"/>')
     # fringe over the forehead
     fr = fringe(xed)
     s.append(inked(fr, HAIR, 3.4))
@@ -265,3 +373,33 @@ def head(xed, uid):
 
 def kid(xed, uid):
     return body(xed, uid) + head(xed, uid)
+
+
+def hero_body(xed, uid, reach=((-176, 560), (176, 560))):
+    """Upper body for the hero: shoulders and coat behind two raised fists.
+    The fists themselves (gold blocks) are drawn by the hero, over the sleeve ends at `reach`."""
+    s = []
+    coat = rpoly([(222, 370), (378, 370), (404, 430), (420, 600), (180, 600), (196, 430)], [26, 26, 14, 8, 8, 14])
+    sleeves = []
+    for (dx, dy) in reach:
+        sx = 1 if dx > 0 else -1
+        sleeves.append(limb([(300 + sx * 62, 394), (300 + sx * 120, 440), (300 + dx, dy)], [46, 44, 42]))
+    shade = (f'<path d="M350,370 L430,370 L460,620 L346,620 Q378,520 350,370Z" fill="{COAT_SH}"/>' if not xed else
+             f'<path d="M140,360 L460,360 L460,440 Q380,424 300,446 Q220,424 140,440Z" fill="#9EA3BF"/>')
+    sl_shade = "".join(clipped(f"hs{uid}{i}", d, f'<path d="M{300 + sx * 90},420 L{300 + sx * 260},470 L{300 + sx * 260},620 L{300 + sx * 150},620Z" fill="{COAT_SH if not xed else "#9EA3BF"}"/>')
+                       for i, (sx, d) in enumerate(zip((-1, 1), sleeves)))
+    s.append(inked([coat] + sleeves, COAT, 3.4, extra=clipped(f"hc{uid}", coat, shade) + sl_shade))
+    for sx in (-1, 1):
+        s.append(fold([(300 + sx * 104, 410), (300 + sx * 126, 440), (300 + sx * 140, 474)], 2.8))
+    s.append(f'<path d="M264,372 L300,446 L336,372Z" fill="{NAVY}" stroke="{INK}" stroke-width="4" stroke-linejoin="round"/>')
+    s.append(f'<path d="M264,372 L300,446 L288,468 L244,386Z" fill="{COAT}" stroke="{INK}" stroke-width="4" stroke-linejoin="round"/>')
+    s.append(f'<path d="M336,372 L300,446 L312,468 L356,386Z" fill="{COAT}" stroke="{INK}" stroke-width="4" stroke-linejoin="round"/>')
+    s.append(f'<path d="M300,468 L300,600" stroke="{INK}" stroke-width="4"/>')
+    s.append(f'<path d="M316,474 L356,474 L356,502 Q336,522 316,502Z" fill="{ORANGE}" stroke="{INK}" stroke-width="3.4" stroke-linejoin="round"/>')
+    s.append(f'<path d="M336,510 C325,500 325,490 331,480 C333,490 337,492 339,486 C345,492 347,502 336,510Z" fill="{GOLD}" stroke="{INK}" stroke-width="2.2" stroke-linejoin="round"/>')
+    if xed:
+        s.append(splat(258, 512, 30, 21, drips=3, run=1.2))
+        s.append(splat(276, 404, 16, 13, drips=2))
+        s.append(splat(352, 520, 16, 22, drips=2, run=1.4))
+        s.append(splat(178, 452, 13, 15, drips=1))
+    return "".join(s)
