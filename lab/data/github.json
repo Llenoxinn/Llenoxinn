@@ -1,10 +1,10 @@
 {
  "_how": "Written by lab/vitals.py every lab round. grid: 'week,day' -> GitHub shade level 0-4 (26 weeks, Sunday first).",
  "user": "Llenoxinn",
- "total": 1470,
- "last7": 429,
- "streak": 30,
- "best": 30,
+ "total": 1497,
+ "last7": 346,
+ "streak": 31,
+ "best": 31,
  "weeks": 26,
  "grid": {
   "0,0": 0,
@@ -39,7 +39,7 @@
   "4,1": 2,
   "4,2": 2,
   "4,3": 1,
-  "4,4": 2,
+  "4,4": 1,
   "4,5": 2,
   "4,6": 3,
   "5,0": 2,
@@ -184,6 +184,7 @@
   "24,6": 4,
   "25,0": 4,
   "25,1": 3,
-  "25,2": 2
+  "25,2": 2,
+  "25,3": 3
  }
 }
