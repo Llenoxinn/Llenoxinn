@@ -506,6 +506,33 @@ def pipes(x, top, bottom, P, n=3):
     return "".join(out)
 
 
+def gas_cylinder(cx, floor, P, xed):
+    """A tall gas cylinder standing on the floor, chained to the wall, valve on top."""
+    w, h = 40, 128
+    top = floor - h + 3
+    body = rpoly([(cx - w / 2, top + 14), (cx + w / 2, top + 14), (cx + w / 2, floor + 3), (cx - w / 2, floor + 3)], [18, 18, 4, 4])
+    band = C["crimson"] if not xed else C["spill"]
+    out = [inked(body, "#5B6478" if not xed else "#2A2F44", 2.8, extra=clipped(f"gc{cx}{xed}", body,
+               f'<rect x="{f(cx - w)}" y="{f(top + 30)}" width="{f(w * 2)}" height="14" fill="{band}"/>'
+               f'<rect x="{f(cx + w * .2)}" y="{f(top)}" width="{f(w)}" height="{h + 10}" fill="{INK}" opacity=".28"/>')),
+           fold([(cx - w * .3, top + 50), (cx - w * .32, floor - 16)], 3, "#C9D0DE"),
+           f'<rect x="{f(cx - 7)}" y="{f(top + 2)}" width="14" height="14" rx="2" fill="#9AA3B8" stroke="{INK}" stroke-width="2.4"/>',
+           f'<rect x="{f(cx - 14)}" y="{f(top - 4)}" width="28" height="7" rx="3" fill="{C["gold"]}" stroke="{INK}" stroke-width="2.2"/>',
+           f'<path d="M{f(cx - w / 2)},{f(top + 70)} q-8,-2 -14,2 M{f(cx + w / 2)},{f(top + 70)} q8,-2 14,2" fill="none" stroke="{INK}" stroke-width="3.4" stroke-dasharray="5 3"/>',
+           f'<ellipse cx="{f(cx)}" cy="{f(floor + 4)}" rx="{f(w * .7)}" ry="4" fill="{INK}" opacity=".35"/>']
+    return "".join(out)
+
+
+def sconce(x, y, P, xed):
+    """A wall lamp on an arm bolted to the wall, its light falling on the words below."""
+    glow = C["gold"] if not xed else C["phoenix"]
+    return (f'<path d="M{f(x - 230)},{f(y + 30)} L{f(x - 12)},{f(y + 14)} L{f(x + 14)},{f(y + 14)} L{f(x + 40)},{f(y + 330)} L{f(x - 300)},{f(y + 330)}Z" fill="{glow}" opacity=".06"/>'
+            f'<rect x="{f(x + 30)}" y="{f(y - 14)}" width="10" height="22" rx="2" fill="{P["machine"]}" stroke="{P["rim"]}" stroke-width="1.6"/>'
+            f'<path d="M{f(x + 30)},{f(y - 3)} H{f(x + 2)} V{f(y)}" fill="none" stroke="{P["machine"]}" stroke-width="5" stroke-linecap="round"/>'
+            f'<path d="M{f(x - 22)},{f(y + 20)} L{f(x - 8)},{f(y)} H{f(x + 12)} L{f(x + 24)},{f(y + 20)}Z" fill="{P["machine"]}" stroke="{P["rim"]}" stroke-width="1.8" stroke-linejoin="round"/>'
+            f'<ellipse cx="{f(x + 1)}" cy="{f(y + 21)}" rx="10" ry="3.6" fill="{glow}"/>')
+
+
 def hanging_lamp(x, y, P, xed):
     """A shop lamp on its cord from the ceiling, lighting the wall where the text sits."""
     shade = f"M{f(x - 30)},{f(y + 26)} L{f(x - 12)},{f(y)} H{f(x + 12)} L{f(x + 30)},{f(y + 26)}Z"
@@ -560,7 +587,7 @@ def feature(theme, layout="wide", animate=True):
         sc.append(f'<line x1="{f(W / 2 + i * 60)}" y1="{floor}" x2="{f(W / 2 + i * 170)}" y2="{H}" stroke="{P["floor_line"]}" stroke-width="2.4"/>')
     # the opening and what is through it
     a_bottom = bench_y + (0 if wide else 0)
-    ad = arch(ax0, ax1, atop, a_bottom + 40)
+    ad = arch(ax0, ax1, atop, a_bottom + (40 if wide else 10))
     bands = "".join(f'<rect x="{ax0 - 10}" y="{f(atop + i * (a_bottom - atop) / 4)}" width="{ax1 - ax0 + 20}" height="{f((a_bottom - atop) / 4 + 2)}" fill="{c}"/>'
                     for i, c in enumerate(P["sky"]))
     if P["cloud"]:
@@ -573,10 +600,16 @@ def feature(theme, layout="wide", animate=True):
     sc.append(f'<path d="{ad}" fill="none" stroke="{INK}" stroke-width="6"/><path d="{ad}" fill="none" stroke="{P["rim"]}" stroke-width="2" transform="translate(-3 -2)"/>')
     # bench across the opening's sill, standing on the floor
     sc.append(desk(ax0 - 18, ax1 + 18, bench_y, bench_y + 22, xed))
-    for lx_ in (ax0 - 6, ax1 + 2):
-        sc.append(f'<rect x="{lx_}" y="{bench_y + 22}" width="12" height="{floor - bench_y - 20}" fill="#3A4152" stroke="{INK}" stroke-width="2.6"/>')
-    # framing silhouettes
-    sc.append(tank(*tank_c, P, 3))
+    if wide:  # a bench on legs, standing on the floor
+        for lx_ in (ax0 - 6, ax1 + 2):
+            sc.append(f'<rect x="{lx_}" y="{bench_y + 22}" width="12" height="{floor - bench_y - 20}" fill="#3A4152" stroke="{INK}" stroke-width="2.6"/>')
+        sc.append(tank(*tank_c, P, 3))
+    else:  # on a phone the bench is the opening's sill, held to the wall by brackets
+        for bx in (ax0 + 20, ax1 - 20):
+            sc.append(f'<path d="M{f(bx - 6)},{f(bench_y + 21)} h12 v30 l-30,-30z" fill="#5B6478" stroke="{INK}" stroke-width="2.6" stroke-linejoin="round"/>'
+                      f'<circle cx="{f(bx)}" cy="{f(bench_y + 30)}" r="2" fill="{INK}"/><circle cx="{f(bx)}" cy="{f(bench_y + 43)}" r="2" fill="{INK}"/>')
+        sc.append(sconce(W - 80, bench_y + 70, P, xed))
+        sc.append(gas_cylinder(W - 92, floor, P, xed))
     sc.append(pipes(pipe_x, 0, floor + 6, P, n=2))
     if lamp_x:
         sc.append(hanging_lamp(lamp_x, 8, P, xed))
