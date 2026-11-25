@@ -554,10 +554,15 @@ def feature(theme, layout="wide", animate=True):
     # the stack: reagent bottles on a shelf bolted to the wall
     sy = ry + 136
     rows = [p["stack"]] if wide else [p["stack"][:4], p["stack"][4:]]
+    gap, margin = 6, 16   # equal gaps; every bottle stands well inside the plank's ends
     for i, row in enumerate(rows):
         y_ = sy + i * 70
-        sc.append(bottles(ts, row, tx + 4, y_, tx + tw + (44 if wide else 20), xed and i == 0, uid + str(i), gap=5))
-        sc.append(shelf(tx - 8, tx + tw + (30 if wide else 8), y_, uid + "s" + str(i), xed, brackets=(tx + 24, tx + tw - 14), depth=11))
+        widths = [max(36, text_width(n, "body-bold", 7.6) + 14) for _, n in row]
+        run = sum(widths) + gap * (len(row) - 1)
+        x0 = tx
+        sc.append(bottles(ts, row, x0 + margin, y_, x0 + margin + run + 1, xed and i == 0, uid + str(i), gap=gap))
+        x1 = x0 + run + 2 * margin
+        sc.append(shelf(x0, x1, y_, uid + "s" + str(i), xed, brackets=(x0 + margin + 14, x1 - margin - 14), depth=11))
     sc.append(f'<rect width="{W}" height="{H}" filter="url(#paper)" opacity=".5"/>')
     s.append(clipped(f"fr{uid}", frame, "".join(sc)))
     body = f'<defs>{toon_defs()}</defs>{ts.defs_svg()}' + "".join(s)
