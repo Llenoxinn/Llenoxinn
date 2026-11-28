@@ -46,7 +46,7 @@ def scope(ts, x, base, w, xed, animate, uid, v):
     out.append(inked(case, "#C9C2AE" if not xed else "#4A4F63", 3.4, extra=clipped(f"sc{uid}", case,
                f'<rect x="{f(x + w * .78)}" y="{f(top)}" width="{f(w)}" height="{h + 10}" fill="{INK}" opacity=".16"/>'
                f'<rect x="{f(x)}" y="{f(base - 46)}" width="{f(w)}" height="60" fill="{INK}" opacity=".12"/>')))
-    out.append(fold([(x + 14, top + 8), (x + w * .5, top + 6), (x + w - 30, top + 8)], 3, "#FFFFFF"))
+    out.append(fold([(x + 22, top + 8), (x + w * .5, top + 6), (x + w - 22, top + 8)], 3, "#FFFFFF"))
     # the screen
     sx, sy, sw, sh = x + 16, top + 14, w - 32, h - 76
     scr = rpoly([(sx, sy), (sx + sw, sy), (sx + sw, sy + sh), (sx, sy + sh)], 18)
